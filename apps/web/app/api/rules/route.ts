@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import Redis from "ioredis";
 import { DEFAULT_DELEGATION_RULES } from "@flowvault/shared";
 
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+import redis from "@/lib/redis";
+import redis from "@/lib/redis";
 
 export async function GET() {
   const raw = await redis.get("flowvault:delegation_rules");

@@ -1,8 +1,7 @@
 import lighthouse from "lighthouse";
-import Redis from "ioredis";
 import type { AgentMemoryEntry, TickResult, AgentState } from "@flowvault/shared";
 
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+import redis from "./redis";
 
 // ─── Filecoin / Lighthouse ────────────────────────────────────────────────────
 

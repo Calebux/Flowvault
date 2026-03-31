@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createPublicClient, http, parseAbi, formatUnits } from "viem";
 import { defineChain } from "viem";
-import Redis from "ioredis";
 import {
   DEFAULT_TARGET_ALLOCATION,
   FLOW_TOKENS,
 } from "@flowvault/shared";
 import type { FlowToken } from "@flowvault/shared";
+import redis from "@/lib/redis";
 
 const ERC20_ABI = parseAbi([
   "function balanceOf(address owner) view returns (uint256)",
@@ -23,8 +23,6 @@ const client = createPublicClient({
   chain: flowTestnet,
   transport: http(process.env.FLOW_EVM_RPC_URL ?? "https://testnet.evm.nodes.onflow.org"),
 });
-
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 
 export async function GET() {
   const smartAccount = process.env.FLOW_SMART_ACCOUNT_ADDRESS as `0x${string}` | undefined;

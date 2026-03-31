@@ -1,5 +1,4 @@
 import { createPublicClient, http, parseAbi, formatUnits, defineChain } from "viem";
-import Redis from "ioredis";
 import {
   FLOW_TOKENS,
   PYTH_CONTRACT_FLOW,
@@ -43,7 +42,7 @@ const client = createPublicClient({
   transport: http(process.env.FLOW_EVM_RPC_URL ?? "https://testnet.evm.nodes.onflow.org"),
 });
 
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+import redis from "./redis";
 
 // ─── ABIs ─────────────────────────────────────────────────────────────────────
 

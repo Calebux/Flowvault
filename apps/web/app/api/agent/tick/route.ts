@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import Redis from "ioredis";
-
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+import redis from "@/lib/redis";
 
 const BASE_URL = process.env.HERMES_BASE_URL ?? "https://inference-api.nousresearch.com/v1";
 const API_KEY = process.env.HERMES_API_KEY ?? "";

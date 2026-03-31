@@ -1,7 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import Redis from "ioredis";
-
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+import redis from "@/lib/redis";
 const KEY = "flowvault:dao_expenses";
 
 interface Expense {

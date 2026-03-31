@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { SelfBackendVerifier, DefaultConfigStore } from "@selfxyz/core";
-import Redis from "ioredis";
-
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+import redis from "@/lib/redis";
 
 const scope = process.env.SELF_APP_SCOPE ?? "flowvault";
 const endpoint =

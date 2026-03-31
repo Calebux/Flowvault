@@ -1,8 +1,7 @@
 import type { TickResult, UserConfig } from "@flowvault/shared";
-import Redis from "ioredis";
 import type { YieldRates } from "./yields";
 
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+import redis from "./redis";
 
 const BASE_URL = process.env.HERMES_BASE_URL ?? "https://inference-api.nousresearch.com/v1";
 const API_KEY  = process.env.HERMES_API_KEY ?? "";

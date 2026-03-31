@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import Redis from "ioredis";
 import { FILECOIN_GATEWAY } from "@flowvault/shared";
 
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+import redis from "@/lib/redis";
 
 async function fetchFromFilecoin(cid: string): Promise<Record<string, unknown> | null> {
   try {
