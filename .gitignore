@@ -29,3 +29,4 @@ npm-debug.log*
 
 # Redis / Docker data
 data/
+*.tsbuildinfo
