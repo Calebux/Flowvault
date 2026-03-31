@@ -13,7 +13,10 @@ import { askCommand } from "./commands/ask";
 import { handleTextMessage } from "./commands/configure";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
-if (!token) throw new Error("TELEGRAM_BOT_TOKEN is required");
+if (!token) {
+  console.log("[FlowVault Bot] No TELEGRAM_BOT_TOKEN set — bot disabled. Exiting cleanly.");
+  process.exit(0);
+}
 
 export const bot: Telegraf<Context> = new Telegraf(token);
 
