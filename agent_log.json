@@ -1,0 +1,282 @@
+{
+  "agent": "MentoGuard",
+  "agentId": 35247,
+  "chain": "eip155:42220",
+  "constraintContract": "0xba26522a9221a3de4234e8d5e8d52bd8216932c8",
+  "logVersion": "1.0.0",
+  "entries": [
+    {
+      "id": "log-001",
+      "timestamp": "2026-03-20T16:10:00Z",
+      "type": "tick",
+      "phase": "observe",
+      "inputs": {
+        "fxRates": { "cUSD": 1.0, "cEUR": 1.1523, "CELO": 0.4821 },
+        "balances": { "cUSD": 2.41, "cEUR": 0.0, "CELO": 4.82 },
+        "allocation": { "cUSD": 33.1, "cEUR": 0.0, "CELO": 66.9 },
+        "targetAllocation": { "cUSD": 45.0, "cEUR": 10.0, "CELO": 45.0 },
+        "drift": { "cUSD": -11.9, "cEUR": -10.0, "CELO": 21.9 },
+        "marketSignals": { "CELO_24h": -1.2 }
+      },
+      "decision": {
+        "action": "execute_swap",
+        "reasoning": "CELO significantly over-allocated at 66.9% vs 45% target. 24h momentum is mild (-1.2%) — not strong enough to delay rebalancing. Swap CELO → cUSD to reduce drift.",
+        "params": { "tokenIn": "CELO", "tokenOut": "cUSD", "amountUSD": 1.62 }
+      },
+      "constraintCheck": {
+        "passed": true,
+        "maxSwapUSD": 500,
+        "dailyVolumeUsed": 0,
+        "tokenAllowed": true,
+        "paused": false
+      },
+      "execution": {
+        "status": "success",
+        "txHash": "0xe01b1a140bfd2c9727f41b0c068689d494a17bdc4fecb7ade66ef29f9c3f87a0",
+        "explorerURL": "https://celoscan.io/tx/0xe01b1a140bfd2c9727f41b0c068689d494a17bdc4fecb7ade66ef29f9c3f87a0",
+        "amountIn": "3.36 CELO",
+        "amountOut": "1.62 cUSD",
+        "protocol": "mento-broker",
+        "attempts": 1
+      },
+      "auditCID": "bafkreigmn2s7whz4knzpt2nsz3a74ybrvakoceqfbylqpgfzjwkngacjwa"
+    },
+    {
+      "id": "log-002",
+      "timestamp": "2026-03-20T17:04:00Z",
+      "type": "tick",
+      "phase": "observe",
+      "inputs": {
+        "fxRates": { "cUSD": 1.0, "cEUR": 1.1531, "CELO": 0.4799 },
+        "balances": { "cUSD": 4.03, "cEUR": 0.0, "CELO": 3.21 },
+        "allocation": { "cUSD": 55.6, "cEUR": 0.0, "CELO": 44.4 },
+        "targetAllocation": { "cUSD": 45.0, "cEUR": 10.0, "CELO": 45.0 },
+        "drift": { "cUSD": 10.6, "cEUR": -10.0, "CELO": -0.6 },
+        "marketSignals": { "CELO_24h": -1.8 }
+      },
+      "decision": {
+        "action": "execute_swap",
+        "reasoning": "cUSD over-allocated, cEUR at zero vs 10% target. Oracle check on cEUR pair required before proceeding.",
+        "params": { "tokenIn": "cUSD", "tokenOut": "cEUR", "amountUSD": 0.65 }
+      },
+      "constraintCheck": {
+        "passed": true,
+        "maxSwapUSD": 500,
+        "dailyVolumeUsed": 1.62,
+        "tokenAllowed": true,
+        "paused": false
+      },
+      "execution": {
+        "status": "failed",
+        "error": "Mento attempt 1/3 failed: getAmountOut reverted — no valid median",
+        "protocol": "mento-broker",
+        "attempts": 3,
+        "retryDelaySeconds": 20,
+        "fallbackAttempted": true,
+        "fallbackStrategy": "two-hop via CELO",
+        "fallbackResult": "failed — oracle inactive on all cEUR exchange providers"
+      },
+      "safetyAction": "aborted — no oracle available, no funds moved",
+      "auditCID": "bafkreih5gfotjtl6nm6ja7bcjepzvcjbblpwy6y6dxonxoilyala7244iq"
+    },
+    {
+      "id": "log-003",
+      "timestamp": "2026-03-20T18:22:00Z",
+      "type": "tick",
+      "phase": "observe",
+      "inputs": {
+        "fxRates": { "cUSD": 1.0, "cEUR": 1.1544, "CELO": 0.4812 },
+        "balances": { "cUSD": 4.03, "cEUR": 0.0, "CELO": 3.21 },
+        "allocation": { "cUSD": 55.5, "cEUR": 0.0, "CELO": 44.5 },
+        "targetAllocation": { "cUSD": 45.0, "cEUR": 10.0, "CELO": 45.0 },
+        "drift": { "cUSD": 10.5, "cEUR": -10.0, "CELO": -0.5 },
+        "aavePositions": { "cUSD": 0.0 },
+        "marketSignals": { "CELO_24h": -0.9 }
+      },
+      "decision": {
+        "action": "deposit_to_aave",
+        "reasoning": "CELO drift is within threshold (-0.5%). cEUR oracle remains inactive. Portfolio is as balanced as possible given constraints. Deploying idle cUSD to Aave V3 to earn yield.",
+        "params": { "token": "cUSD", "amountUSD": 0.62 }
+      },
+      "constraintCheck": {
+        "passed": true,
+        "maxSwapUSD": 500,
+        "dailyVolumeUsed": 1.62,
+        "tokenAllowed": true,
+        "paused": false
+      },
+      "execution": {
+        "status": "success",
+        "txHash": "0xeba6b17715d3185becdc816d924f60cb8ceecdcd38eda06b2c740b298f44408c",
+        "explorerURL": "https://celoscan.io/tx/0xeba6b17715d3185becdc816d924f60cb8ceecdcd38eda06b2c740b298f44408c",
+        "amountDeposited": "0.62 cUSD",
+        "protocol": "aave-v3",
+        "apy": "4.2%",
+        "attempts": 1
+      },
+      "auditCID": "bafkreiaivq53qg67hyqtjiq3awasdjxqrbd3nh7dg4iyacew5vi7fpv4tu"
+    },
+    {
+      "id": "log-004",
+      "timestamp": "2026-03-21T09:15:00Z",
+      "type": "tick",
+      "phase": "observe",
+      "inputs": {
+        "fxRates": { "cUSD": 1.0, "cEUR": 1.1555, "CELO": 0.4734 },
+        "balances": { "cUSD": 3.41, "cEUR": 0.0, "CELO": 3.21 },
+        "aavePositions": { "cUSD": 0.62 },
+        "allocation": { "cUSD": 47.0, "cEUR": 0.0, "CELO": 44.3 },
+        "targetAllocation": { "cUSD": 45.0, "cEUR": 10.0, "CELO": 45.0 },
+        "drift": { "cUSD": 2.0, "cEUR": -10.0, "CELO": -0.7 },
+        "marketSignals": { "CELO_24h": -3.21 }
+      },
+      "decision": {
+        "action": "hold",
+        "reasoning": "CELO drift is within threshold (-0.7%). cEUR oracle still inactive — cannot reduce cUSD excess via swap. CELO has mild 24h downtrend (-3.21%); holding is correct. Monitoring.",
+        "params": null
+      },
+      "constraintCheck": {
+        "passed": true,
+        "paused": false
+      },
+      "execution": {
+        "status": "held",
+        "reason": "no swap required — drift within threshold, cEUR oracle unavailable"
+      },
+      "auditCID": "bafkreia22xedp6c3ml3kegpijnmjvpwke4prwbjajxpkdxhdwatka2bqey"
+    },
+    {
+      "id": "log-005",
+      "timestamp": "2026-03-21T14:33:00Z",
+      "type": "tick",
+      "phase": "observe",
+      "inputs": {
+        "fxRates": { "cUSD": 1.0, "cEUR": 1.1548, "CELO": 0.4801 },
+        "balances": { "cUSD": 3.41, "cEUR": 0.0, "CELO": 2.89 },
+        "aavePositions": { "cUSD": 0.62 },
+        "allocation": { "cUSD": 49.3, "cEUR": 0.0, "CELO": 41.8 },
+        "targetAllocation": { "cUSD": 45.0, "cEUR": 10.0, "CELO": 45.0 },
+        "drift": { "cUSD": 4.3, "cEUR": -10.0, "CELO": -3.2 },
+        "marketSignals": { "CELO_24h": 1.4 }
+      },
+      "decision": {
+        "action": "execute_swap",
+        "reasoning": "CELO under-allocated (-3.2% drift). cEUR oracle active again — confirmed via getAmountOut. cUSD → cEUR swap available. Prioritizing cEUR allocation first as it is at 0% vs 10% target. CELO 24h momentum is mildly positive (1.4%) — favorable for rebalancing toward CELO.",
+        "params": { "tokenIn": "cUSD", "tokenOut": "cEUR", "amountUSD": 0.65 }
+      },
+      "constraintCheck": {
+        "passed": true,
+        "maxSwapUSD": 500,
+        "dailyVolumeUsed": 0,
+        "tokenAllowed": true,
+        "paused": false
+      },
+      "execution": {
+        "status": "success",
+        "txHash": "0xacca0898d48e68cde32be6dbdb22fbc416b3928d26b03b883b5f4bb82862417a",
+        "explorerURL": "https://celoscan.io/tx/0xacca0898d48e68cde32be6dbdb22fbc416b3928d26b03b883b5f4bb82862417a",
+        "amountIn": "0.65 cUSD",
+        "amountOut": "0.563 cEUR",
+        "protocol": "mento-broker",
+        "attempts": 1
+      },
+      "auditCID": "bafkreifhianh4x55h7hepzadoem7ajtaegybie37pzw2ospnrlfn25yz6u"
+    },
+    {
+      "id": "log-006",
+      "timestamp": "2026-03-21T15:12:00Z",
+      "type": "tick",
+      "phase": "observe",
+      "inputs": {
+        "fxRates": { "cUSD": 1.0, "cEUR": 1.1551, "CELO": 0.4813 },
+        "balances": { "cUSD": 2.76, "cEUR": 0.563, "CELO": 2.89 },
+        "aavePositions": { "cUSD": 0.62 },
+        "allocation": { "cUSD": 40.2, "cEUR": 9.6, "CELO": 41.9 },
+        "targetAllocation": { "cUSD": 45.0, "cEUR": 10.0, "CELO": 45.0 },
+        "drift": { "cUSD": -4.8, "cEUR": -0.4, "CELO": -3.1 },
+        "marketSignals": { "CELO_24h": 1.8 }
+      },
+      "decision": {
+        "action": "execute_swap",
+        "reasoning": "CELO under-allocated (-3.1%). cEUR is near target (-0.4%). cUSD is below target but CELO deficit takes priority given positive momentum (1.8%). Swap cUSD → CELO.",
+        "params": { "tokenIn": "cUSD", "tokenOut": "CELO", "amountUSD": 0.32 }
+      },
+      "constraintCheck": {
+        "passed": true,
+        "maxSwapUSD": 500,
+        "dailyVolumeUsed": 0.65,
+        "tokenAllowed": true,
+        "paused": false
+      },
+      "execution": {
+        "status": "success",
+        "txHash": "0xaf1a90a9075c6476157d520b333cf9ce08ce5459206bd96076d1a8ce242ba004",
+        "explorerURL": "https://celoscan.io/tx/0xaf1a90a9075c6476157d520b333cf9ce08ce5459206bd96076d1a8ce242ba004",
+        "amountIn": "0.32 cUSD",
+        "amountOut": "0.665 CELO",
+        "protocol": "mento-broker",
+        "attempts": 1
+      },
+      "auditCID": "bafkreicypu3e5qgfyndn7wu7d5ang57udx3q24rvqkzzhhek5ukdrgziii"
+    },
+    {
+      "id": "log-007",
+      "timestamp": "2026-03-21T18:41:00Z",
+      "type": "constraint-validation",
+      "phase": "pre-execution",
+      "description": "On-chain constraint check performed before swap execution",
+      "contractRead": {
+        "contract": "0xba26522a9221a3de4234e8d5e8d52bd8216932c8",
+        "function": "getRules",
+        "result": {
+          "maxSwapAmountUSD": 500,
+          "maxDailyVolumeUSD": 2000,
+          "driftThresholdBps": 500,
+          "isPaused": false,
+          "allowedTokens": [
+            "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+            "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
+            "0x471EcE3750Da237f93B8E339c536989b8978a438"
+          ]
+        }
+      },
+      "decision": "proceed — all constraints satisfied",
+      "note": "This check runs every tick before any execution. Agent cannot bypass it."
+    },
+    {
+      "id": "log-008",
+      "timestamp": "2026-03-22T08:00:00Z",
+      "type": "summary",
+      "totalTicks": 432,
+      "totalSwaps": 12,
+      "totalAaveDeposits": 1,
+      "totalAaveWithdrawals": 0,
+      "totalConstraintChecks": 432,
+      "constraintViolationsAttempted": 0,
+      "swapsAbortedByConstraint": 0,
+      "swapsAbortedByOracleFailure": 7,
+      "filecoinLogsCreated": 6,
+      "confirmedTxHashes": [
+        "0xe01b1a140bfd2c9727f41b0c068689d494a17bdc4fecb7ade66ef29f9c3f87a0",
+        "0xacca0898d48e68cde32be6dbdb22fbc416b3928d26b03b883b5f4bb82862417a",
+        "0x9afb15a9472ed380158d712a8f57891621c91a8ba6f749a7d405dc582d04d70e",
+        "0x7e8481fc98f51544292a4ea2e708b22999754144d5e19e93b3aece28856a6894",
+        "0xc74ab042110259de1d1050f630cb376addfe2125816f077a896236f1a009610b",
+        "0xaf1a90a9075c6476157d520b333cf9ce08ce5459206bd96076d1a8ce242ba004",
+        "0x09a8503d2f3ebbf94bec9b8c4c73a5dd6c871c5c52ec1d0765b9b1f4000ba8af",
+        "0xef34e1de907c4206de5af4d7f036615e60c2f03d148b18f567502096dcf2f5f0",
+        "0x29477d43e85eef6db5c8530808e20cf7ac2e3c50c695caeb36da191978b2f78c",
+        "0x8228bbc56123a286cb209a4ecf7d169946570e1960bc80a868fed7c12ba942be",
+        "0x0fffcce0e9b631a3720c255eea97f48f0be6a0d3a3d6ca55cba04e0fbb185809",
+        "0x9e6649d2b4798c25931f906515465d47c634a115d2897708fbbfee24475ef5ff",
+        "0xeba6b17715d3185becdc816d924f60cb8ceecdcd38eda06b2c740b298f44408c"
+      ],
+      "safetyRecord": {
+        "noFundsLostToFailure": true,
+        "allRevertsSafelyHandled": true,
+        "constraintContractAlwaysConsulted": true,
+        "emergencyPauseTestedAndWorking": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm --filter @mentoguard/shared build"
+
+[deploy]
+startCommand = "node --loader tsx/esm apps/telegram/src/bot.ts"
+restartPolicyType = "always"

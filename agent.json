@@ -1,0 +1,139 @@
+{
+  "name": "MentoGuard",
+  "version": "1.0.0",
+  "description": "Autonomous DeFi agent that manages stablecoin portfolios on Celo with on-chain constrained autonomy. Every action is validated against rules stored in a smart contract before execution. The LLM decides. The chain enforces.",
+  "operator": {
+    "wallet": "0x0067378592A4d0ccC3146dBa13137E21589921Ed",
+    "chain": "eip155:42220"
+  },
+  "identity": {
+    "erc8004": {
+      "agentId": 35247,
+      "registry": "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+      "registrationTx": "0x568d35fe34269ddcdb9e915c19c7c53a65503ac88d076d686cd1456f17f3b53e",
+      "agentUri": "data:application/json;base64,eyJ0eXBlIjoiaHR0cHM6Ly9laXBzLmV0aGVyZXVtLm9yZy9FSVBTL2VpcC04MDA0I3JlZ2lzdHJhdGlvbi12MSIsIm5hbWUiOiJNZW50b0d1YXJkIiwiZGVzY3JpcHRpb24iOiJBdXRvbm9tb3VzIEZYIGhlZGdpbmcgYW5kIHlpZWxkIG9wdGltaXphdGlvbiBhZ2VudCBmb3IgQ2VsbyBzdGFibGVjb2lucy4iLCJzZXJ2aWNlcyI6W10sImFjdGl2ZSI6dHJ1ZX0="
+    },
+    "constraintContract": {
+      "address": "0xba26522a9221a3de4234e8d5e8d52bd8216932c8",
+      "chain": "eip155:42220",
+      "deployTx": "0xb615a4f5c3d7443d6302be0c1c8b0213cb7cca77206d32a67f72c77b76ae2b22"
+    }
+  },
+  "capabilities": {
+    "taskCategories": [
+      "defi-portfolio-management",
+      "autonomous-trading",
+      "yield-optimization",
+      "on-chain-execution",
+      "fx-hedging"
+    ],
+    "tools": [
+      {
+        "name": "mento-broker",
+        "description": "Stablecoin swaps via Mento Broker on Celo mainnet",
+        "contract": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
+        "chain": "eip155:42220"
+      },
+      {
+        "name": "aave-v3",
+        "description": "Yield deposit and withdrawal via Aave V3 on Celo",
+        "contract": "0x3E59A31363E2ad014dcbc521c4a0d5757d9f3402",
+        "chain": "eip155:42220"
+      },
+      {
+        "name": "hermes-llm",
+        "description": "NousResearch Hermes-4-70B via OpenAI-compatible function calling for market-aware decisions",
+        "model": "Hermes-4-70B"
+      },
+      {
+        "name": "lighthouse-filecoin",
+        "description": "Permanent audit log storage on Filecoin via Lighthouse Storage"
+      },
+      {
+        "name": "self-protocol",
+        "description": "ZK passport identity verification — verified humans unlock higher delegation limits"
+      },
+      {
+        "name": "frankfurter-api",
+        "description": "Live FX rates (EUR/USD, BRL/USD) for stablecoin valuation"
+      },
+      {
+        "name": "coingecko-api",
+        "description": "24h CELO price momentum for market-aware rebalancing decisions"
+      },
+      {
+        "name": "defillama-api",
+        "description": "Live Celo DeFi APY data for yield opportunity ranking"
+      },
+      {
+        "name": "telegram-bot",
+        "description": "Natural language commands and real-time alerts via Telegraf"
+      },
+      {
+        "name": "redis",
+        "description": "Shared state between agent loop, dashboard, and Telegram bot"
+      }
+    ]
+  },
+  "constraints": {
+    "source": "on-chain",
+    "contract": "0xba26522a9221a3de4234e8d5e8d52bd8216932c8",
+    "rules": {
+      "maxSwapAmountUSD": 500,
+      "maxDailyVolumeUSD": 2000,
+      "driftThresholdBps": 500,
+      "allowedTokens": [
+        "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+        "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
+        "0x471EcE3750Da237f93B8E339c536989b8978a438"
+      ],
+      "requiresOnChainValidation": true,
+      "emergencyPauseSupported": true
+    },
+    "compute": {
+      "tickIntervalSeconds": 60,
+      "maxLLMCallsPerTick": 1,
+      "maxOnChainTxsPerTick": 2,
+      "maxRetries": 3,
+      "retryDelaySeconds": 20
+    }
+  },
+  "execution": {
+    "loop": "observe → decide → act",
+    "tickIntervalSeconds": 60,
+    "runtime": "node-cron",
+    "chain": "eip155:42220",
+    "rpc": "https://forno.celo.org",
+    "confirmedTxCount": 13,
+    "auditTrail": {
+      "storage": "filecoin-lighthouse",
+      "sampleCIDs": [
+        "bafkreih5gfotjtl6nm6ja7bcjepzvcjbblpwy6y6dxonxoilyala7244iq",
+        "bafkreigmn2s7whz4knzpt2nsz3a74ybrvakoceqfbylqpgfzjwkngacjwa",
+        "bafkreiaivq53qg67hyqtjiq3awasdjxqrbd3nh7dg4iyacew5vi7fpv4tu",
+        "bafkreia22xedp6c3ml3kegpijnmjvpwke4prwbjajxpkdxhdwatka2bqey",
+        "bafkreifhianh4x55h7hepzadoem7ajtaegybie37pzw2ospnrlfn25yz6u",
+        "bafkreicypu3e5qgfyndn7wu7d5ang57udx3q24rvqkzzhhek5ukdrgziii"
+      ]
+    }
+  },
+  "techStack": [
+    "TypeScript",
+    "Node.js",
+    "Next.js 15",
+    "viem",
+    "node-cron",
+    "ioredis",
+    "telegraf",
+    "foundry",
+    "solidity",
+    "pnpm-workspaces",
+    "turborepo"
+  ],
+  "deployments": {
+    "dashboard": "https://mentoguard.vercel.app",
+    "telegram": "@MentoGuardBot",
+    "agentRuntime": "Railway"
+  },
+  "repository": "https://github.com/Calebux/Mentoguard"
+}

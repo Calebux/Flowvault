@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm --filter @mentoguard/shared build"
+
+[deploy]
+startCommand = "node --loader tsx/esm packages/agent-core/src/index.ts"
+restartPolicyType = "always"
