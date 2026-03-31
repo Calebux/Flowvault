@@ -1,7 +1,0 @@
-FROM node:20-alpine
-RUN npm i -g pnpm tsx
-WORKDIR /app
-COPY . .
-RUN pnpm install --frozen-lockfile --prod=false
-RUN pnpm --filter @mentoguard/shared build
-CMD ["tsx", "packages/agent-core/src/index.ts"]
