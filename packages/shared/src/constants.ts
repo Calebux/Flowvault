@@ -46,9 +46,9 @@ export const DEFAULT_DRIFT_THRESHOLD = 5; // 5%
 
 // Target: 40% FLOW, 30% USDC, 20% USDT, 10% stFLOW
 export const DEFAULT_TARGET_ALLOCATION = {
-  FLOW:   40,
-  USDC:   30,
-  USDT:   20,
+  FLOW:   25,
+  USDC:   50, // Intentional skew to force demo AI rebalance
+  USDT:   15,
   stFLOW: 10,
 };
 

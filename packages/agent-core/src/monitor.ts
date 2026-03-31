@@ -22,25 +22,25 @@ import { fetchYieldRates } from "./yields";
 
 // ─── Flow EVM chain definition ────────────────────────────────────────────────
 
-export const flowMainnet = defineChain({
-  id: FLOW_EVM_CHAIN_ID,
-  name: "Flow EVM",
+export const flowTestnet = defineChain({
+  id: 545,
+  name: "Flow EVM Testnet",
   nativeCurrency: { name: "Flow", symbol: "FLOW", decimals: 18 },
   rpcUrls: {
     default: {
-      http: [process.env.FLOW_EVM_RPC_URL ?? "https://mainnet.evm.nodes.onflow.org"],
+      http: [process.env.FLOW_EVM_RPC_URL ?? "https://testnet.evm.nodes.onflow.org"],
     },
   },
   blockExplorers: {
-    default: { name: "FlowScan", url: "https://evm.flowscan.io" },
+    default: { name: "FlowScan", url: "https://evm-testnet.flowscan.io" },
   },
 });
 
 // ─── Clients ─────────────────────────────────────────────────────────────────
 
 const client = createPublicClient({
-  chain: flowMainnet,
-  transport: http(process.env.FLOW_EVM_RPC_URL ?? "https://mainnet.evm.nodes.onflow.org"),
+  chain: flowTestnet,
+  transport: http(process.env.FLOW_EVM_RPC_URL ?? "https://testnet.evm.nodes.onflow.org"),
 });
 
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
