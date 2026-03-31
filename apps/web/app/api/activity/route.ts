@@ -5,14 +5,15 @@ const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 
 export async function GET() {
   try {
-    const [tickRaw, stateRaw, reasoningRaw] = await Promise.all([
+    const [tickRaw, stateRaw, logEntries] = await Promise.all([
       redis.get("flowvault:last_tick"),
       redis.get("flowvault:agent_state"),
-      redis.get("flowvault:last_reasoning"),
+      redis.lrange("flowvault:reasoning_log", 0, 19),
     ]);
 
-    const entries: { id: string; time: string; message: string; type: string }[] = [];
+    const entries: { id: string; time: string; message: string; type: string; action?: string }[] = [];
 
+    // Agent state summary
     if (stateRaw) {
       const state = JSON.parse(stateRaw);
       if (state.lastTickAt) {
@@ -25,6 +26,7 @@ export async function GET() {
       }
     }
 
+    // Latest tick drift info
     if (tickRaw) {
       const tick = JSON.parse(tickRaw);
       const time = new Date(tick.tickAt).toLocaleTimeString();
@@ -36,19 +38,21 @@ export async function GET() {
       if (tick.shouldRebalance) {
         entries.unshift({ id: `tick-warn-${tick.tickAt}`, time, message: `Drift exceeded threshold — ${drifts}`, type: "warning" });
       } else if (drifts) {
-        entries.unshift({ id: `tick-info-${tick.tickAt}`, time, message: `FX tick — drift: ${drifts}`, type: "info" });
+        entries.unshift({ id: `tick-info-${tick.tickAt}`, time, message: `Treasury tick — drift: ${drifts}`, type: "info" });
       } else {
-        entries.unshift({ id: `tick-ok-${tick.tickAt}`, time, message: "FX tick complete — portfolio balanced", type: "info" });
+        entries.unshift({ id: `tick-ok-${tick.tickAt}`, time, message: "Treasury tick complete — allocation balanced", type: "info" });
       }
     }
 
-    if (reasoningRaw) {
-      const r = JSON.parse(reasoningRaw);
+    // Rolling reasoning log (newest first from Redis LPUSH)
+    for (const raw of logEntries) {
+      const r = JSON.parse(raw);
       entries.push({
         id: `reasoning-${r.timestamp}`,
         time: new Date(r.timestamp).toLocaleTimeString(),
-        message: `🧠 Hermes: ${r.text}`,
+        message: r.text,
         type: "reasoning",
+        action: r.action,
       });
     }
 

@@ -290,17 +290,27 @@ Before calling a tool, briefly state your reasoning in 1-2 sentences — what yo
     }[];
   };
 
-  // Capture and persist Hermes's reasoning text (shown in dashboard activity feed)
+  // Capture and persist Hermes's reasoning text into a rolling log
   const reasoning = data.choices[0]?.message?.content;
+  const toolCalls = data.choices[0]?.message?.tool_calls;
+
+  // Determine primary action for the log entry
+  const primaryAction = toolCalls?.[0]?.function?.name ?? "hold";
+
   if (reasoning?.trim()) {
-    await redis.set("flowvault:last_reasoning", JSON.stringify({
+    const entry = JSON.stringify({
       text: reasoning.trim(),
+      action: primaryAction,
       timestamp: Date.now(),
-    }), "EX", 300);
-    console.log(`[llm] Hermes reasoning: ${reasoning.trim().slice(0, 120)}...`);
+    });
+    // Keep a rolling log of the last 50 reasoning entries
+    await redis.lpush("flowvault:reasoning_log", entry);
+    await redis.ltrim("flowvault:reasoning_log", 0, 49);
+    // Also keep the legacy single key for backward compat
+    await redis.set("flowvault:last_reasoning", entry, "EX", 3600);
+    console.log(`[llm] Hermes: [${primaryAction}] ${reasoning.trim().slice(0, 120)}...`);
   }
 
-  const toolCalls = data.choices[0]?.message?.tool_calls;
   if (!toolCalls?.length) {
     return [{ action: "hold", reason: "No tool calls returned by Hermes" }];
   }
@@ -308,6 +318,7 @@ Before calling a tool, briefly state your reasoning in 1-2 sentences — what yo
   const decisions: AgentDecision[] = [];
   for (const call of toolCalls) {
     const args = JSON.parse(call.function.arguments);
+
     switch (call.function.name) {
       case "execute_swap":
         decisions.push({ action: "execute_swap", ...args });

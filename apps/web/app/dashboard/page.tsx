@@ -1,13 +1,31 @@
 "use client";
 
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AgentStatusCard } from "@/components/AgentStatusCard";
 import { ExposureDonut } from "@/components/ExposureDonut";
 import { FXRateHeatmap } from "@/components/FXRateHeatmap";
 import { TradeTimeline } from "@/components/TradeTimeline";
 import { AgentActivityFeed } from "@/components/AgentActivityFeed";
 import { YieldOpportunities } from "@/components/YieldOpportunities";
+import { HermesBrainPanel, type ReasoningEntry } from "@/components/HermesBrainPanel";
+import { ActionGraph } from "@/components/ActionGraph";
+
+async function fetchActivity(): Promise<ReasoningEntry[]> {
+  const res = await fetch("/api/activity");
+  if (!res.ok) return [];
+  return res.json();
+}
 
 export default function DashboardPage() {
+  const [showGraph, setShowGraph] = useState(false);
+
+  const { data: activityEntries = [] } = useQuery<ReasoningEntry[]>({
+    queryKey: ["activity"],
+    queryFn: fetchActivity,
+    refetchInterval: 5000,
+  });
+
   return (
     <div className="space-y-6">
       {/* Top row: Status + Portfolio + Next Action */}
@@ -17,7 +35,10 @@ export default function DashboardPage() {
         <NextActionCard />
       </div>
 
-      {/* FX Heatmap */}
+      {/* Hermes Brain Panel — AI reasoning + "View Action Graph" button */}
+      <HermesBrainPanel entries={activityEntries} onViewGraph={() => setShowGraph(true)} />
+
+      {/* FX / Price Heatmap */}
       <FXRateHeatmap />
 
       {/* Bottom row: Timeline + Activity + Yields */}
@@ -26,6 +47,11 @@ export default function DashboardPage() {
         <AgentActivityFeed />
         <YieldOpportunities />
       </div>
+
+      {/* Action Graph modal */}
+      {showGraph && (
+        <ActionGraph entries={activityEntries} onClose={() => setShowGraph(false)} />
+      )}
     </div>
   );
 }
