@@ -62,7 +62,7 @@ export const DEFAULT_DELEGATION_RULES = {
 };
 
 // ─── Monitor ─────────────────────────────────────────────────────────────────
-export const MONITOR_INTERVAL_SECONDS = 60;
+export const MONITOR_INTERVAL_SECONDS = 15;
 
 // ─── Filecoin ─────────────────────────────────────────────────────────────────
 export const FILECOIN_GATEWAY = "https://gateway.lighthouse.storage";

@@ -12,16 +12,16 @@ const ERC20_ABI = parseAbi([
   "function balanceOf(address owner) view returns (uint256)",
 ]);
 
-const flowMainnet = defineChain({
-  id: 747,
-  name: "Flow EVM",
+const flowTestnet = defineChain({
+  id: 545,
+  name: "Flow EVM Testnet",
   nativeCurrency: { name: "Flow", symbol: "FLOW", decimals: 18 },
-  rpcUrls: { default: { http: [process.env.FLOW_EVM_RPC_URL ?? "https://mainnet.evm.nodes.onflow.org"] } },
+  rpcUrls: { default: { http: [process.env.FLOW_EVM_RPC_URL ?? "https://testnet.evm.nodes.onflow.org"] } },
 });
 
 const client = createPublicClient({
-  chain: flowMainnet,
-  transport: http(process.env.FLOW_EVM_RPC_URL ?? "https://mainnet.evm.nodes.onflow.org"),
+  chain: flowTestnet,
+  transport: http(process.env.FLOW_EVM_RPC_URL ?? "https://testnet.evm.nodes.onflow.org"),
 });
 
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
