@@ -70,10 +70,10 @@ export default function LandingPage() {
             <span className="pulse-green" style={{ width: 6, height: 6, borderRadius: "50%", background: "#28C840", display: "inline-block" }} />
           </div>
           <h1 style={{ fontSize: "clamp(2rem,5vw,3.75rem)", fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 1.5rem", color: "#191918" }}>
-            Autonomous FX hedging<br />for Celo stablecoins.
+            AI-powered treasury<br />management on Flow.
           </h1>
           <p style={{ fontSize: "1.2rem", fontWeight: 400, maxWidth: "36rem", margin: "0 auto 2.5rem", color: "#191918" }}>
-            Set your rules once — the agent monitors, rebalances, and reports 24/7 on Celo.
+            Set your delegation rules once — the AI agent monitors runway, enforces guardrails, and executes DAO-approved rebalances 24/7.
           </p>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1.5rem", flexWrap: "wrap" }}>
             <Link
@@ -95,14 +95,14 @@ export default function LandingPage() {
       <main style={{ maxWidth: 1000, margin: "calc(-10vh - 50px) auto 0", position: "relative", zIndex: 10, padding: "0 1.5rem 120px" }}>
         <div className="m-card" style={{ marginBottom: "1.5rem" }}>
           <p style={{ textAlign: "center", fontSize: "1rem", lineHeight: 1.7, color: "rgba(25,25,24,0.65)", maxWidth: "40rem", margin: "0 auto 2.5rem" }}>
-            FlowVault builds <strong style={{ color: "#191918", fontWeight: 500 }}>autonomous rebalancing agents</strong> for FX stablecoins on Celo. Smart delegation, on-chain execution, and Filecoin-backed memory.
+            FlowVault gives DAOs an <strong style={{ color: "#191918", fontWeight: 500 }}>autonomous treasury agent</strong> — enforcing on-chain guardrails, protecting runway, and logging every decision to Flow for full auditability.
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", border: "1px solid rgba(25,25,24,0.12)", borderRadius: 8 }}>
             <div style={{ padding: "1.75rem" }}>
-              <p className="m-label" style={{ marginBottom: "1.25rem" }}>For Traders</p>
+              <p className="m-label" style={{ marginBottom: "1.25rem" }}>For DAOs</p>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.875rem", fontSize: "0.875rem" }}>
-                {["Live FX rate monitoring","Drift alerts via Telegram","Visual portfolio dashboard"].map(f => (
+                {["Runway protection & expense reserves","2-of-3 multi-sig rebalance approvals","On-chain audit log of every action"].map(f => (
                   <li key={f} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                     <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#FCAA2D", flexShrink: 0, display: "inline-block" }} />
                     {f}
@@ -114,7 +114,7 @@ export default function LandingPage() {
             <div style={{ padding: "1.75rem" }}>
               <p className="m-label" style={{ marginBottom: "1.25rem" }}>For AI Agents</p>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.875rem", fontSize: "0.875rem" }}>
-                {["MetaMask delegation execution","Filecoin trade memory (CIDs)","MCP · API · Telegram CLI"].map(f => (
+                {["Cadence smart delegation rules","IncrementFi yield vault integration","Hermes AI decision & execution engine"].map(f => (
                   <li key={f} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                     <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#FCAA2D", flexShrink: 0, display: "inline-block" }} />
                     {f}
@@ -125,13 +125,13 @@ export default function LandingPage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "3rem", padding: "1.75rem 0 0", borderTop: "1px solid rgba(25,25,24,0.12)", marginTop: "2rem", opacity: 0.55, fontFamily: "var(--font-mono, monospace)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-            {["Celo","Mento","Uniswap","Filecoin","Self Protocol"].map(n => <span key={n}>{n}</span>)}
+            {["Flow","Cadence","IncrementFi","DAOMultiSig","Self Protocol"].map(n => <span key={n}>{n}</span>)}
           </div>
         </div>
 
         {/* Feature pills */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", justifyContent: "center" }}>
-          {["🔗 Celo Native","🦄 Uniswap Execution","🦊 MetaMask Delegation","🗂 Filecoin Memory","🪪 Self Protocol","🌐 ENS Identity"].map(f => (
+          {["⛓️ Flow Native","🏦 Treasury Management","🤖 AI Agent Execution","🔒 2-of-3 MultiSig","📊 Expense Reserves","🪪 Self Protocol"].map(f => (
             <span key={f} style={{ padding: "0.375rem 0.875rem", borderRadius: "99px", border: "1px solid rgba(25,25,24,0.12)", fontSize: "0.8rem", color: "rgba(25,25,24,0.65)" }}>
               {f}
             </span>
@@ -149,7 +149,7 @@ export default function LandingPage() {
       }}>
         <span style={{ fontWeight: 700, color: "white", fontSize: "0.875rem", letterSpacing: "-0.02em" }}>🛡️ FlowVault</span>
         <span style={{ width: 1, height: 16, background: "rgba(255,255,255,0.15)" }} />
-        {[["Dashboard", "/dashboard"], ["Docs", "#"], ["Pricing", "#"]].map(([label, href]) => (
+        {[["Dashboard", "/dashboard"], ["Treasury", "/dashboard/treasury"], ["Rules", "/dashboard/rules"]].map(([label, href]) => (
           <Link key={label} href={href} style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>
             {label}
           </Link>
