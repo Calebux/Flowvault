@@ -1,9 +1,17 @@
 "use client";
 
 import { useFXRates } from "@/hooks/useFXRates";
+import type { FXRates } from "@flowvault/shared";
 
-const TOKENS = ["cUSD", "cEUR", "cBRL", "cREAL", "CELO"] as const;
-const PREV_RATES: Record<string, number> = { cUSD: 1.0, cEUR: 1.075, cBRL: 0.198, cREAL: 0.179, CELO: 0.50 };
+const TOKENS = ["FLOW", "USDC", "USDT", "stFLOW"] as const;
+type FlowTokenKey = typeof TOKENS[number];
+
+const PREV_RATES: Record<FlowTokenKey, number> = {
+  FLOW:   0.50,
+  USDC:   1.00,
+  USDT:   1.00,
+  stFLOW: 0.525,
+};
 
 export function FXRateHeatmap() {
   const { rates, isLoading } = useFXRates();
@@ -11,17 +19,17 @@ export function FXRateHeatmap() {
   return (
     <div className="m-card">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-        <p className="m-label">FX Rate Heatmap</p>
+        <p className="m-label">Token Prices</p>
         <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.65rem", color: "rgba(25,25,24,0.35)" }}>
           {rates ? new Date(rates.updatedAt).toLocaleTimeString() : "—"}
         </span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "0.75rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem" }}>
         {TOKENS.map((token) => {
-          const rate   = rates?.[token] ?? 0;
-          const prev   = PREV_RATES[token] ?? rate;
-          const change = ((rate - prev) / prev) * 100;
+          const rate   = rates?.[token as keyof FXRates] as number ?? 0;
+          const prev   = PREV_RATES[token];
+          const change = prev > 0 ? ((rate - prev) / prev) * 100 : 0;
           const isUp   = change >= 0;
           return (
             <div key={token} style={{
@@ -31,7 +39,7 @@ export function FXRateHeatmap() {
             }}>
               <p style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.6rem", color: "rgba(25,25,24,0.4)", marginBottom: "0.25rem" }}>{token}</p>
               <p style={{ fontFamily: "var(--font-mono, monospace)", fontWeight: 700, fontSize: "0.95rem" }}>
-                {isLoading ? "—" : rate.toFixed(4)}
+                {isLoading ? "—" : `$${rate.toFixed(4)}`}
               </p>
               {!isLoading && (
                 <p style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.65rem", marginTop: "0.25rem", color: isUp ? "#16a34a" : "#ef4444" }}>

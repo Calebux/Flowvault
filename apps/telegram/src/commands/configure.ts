@@ -12,15 +12,14 @@ const TOOLS = [
     type: "function",
     function: {
       name: "update_allocation",
-      description: "Update the target portfolio allocation. Percentages must sum to 100.",
+      description: "Update the target treasury allocation. Percentages must sum to 100.",
       parameters: {
         type: "object",
         properties: {
-          cUSD:  { type: "number", description: "Target % for cUSD (0-100)" },
-          cEUR:  { type: "number", description: "Target % for cEUR (0-100)" },
-          CELO:  { type: "number", description: "Target % for CELO (0-100)" },
-          cBRL:  { type: "number", description: "Target % for cBRL (0-100)" },
-          cREAL: { type: "number", description: "Target % for cREAL (0-100)" },
+          FLOW:   { type: "number", description: "Target % for FLOW (0-100)" },
+          USDC:   { type: "number", description: "Target % for USDC (0-100)" },
+          USDT:   { type: "number", description: "Target % for USDT (0-100)" },
+          stFLOW: { type: "number", description: "Target % for stFLOW (0-100)" },
         },
       },
     },
@@ -78,13 +77,13 @@ export async function handleTextMessage(ctx: Context): Promise<void> {
   await ctx.reply("⚙️ Configuring…");
 
   try {
-    const configRaw = await redis.get("mentoguard:user_config");
+    const configRaw = await redis.get("flowvault:user_config");
     const config = configRaw ? JSON.parse(configRaw) : {};
 
     const currentState = `Current config:
-- Target: cUSD ${config.targetAllocation?.cUSD ?? 45}%, cEUR ${config.targetAllocation?.cEUR ?? 10}%, CELO ${config.targetAllocation?.CELO ?? 45}%
+- Target: FLOW ${config.targetAllocation?.FLOW ?? 40}%, USDC ${config.targetAllocation?.USDC ?? 30}%, USDT ${config.targetAllocation?.USDT ?? 20}%, stFLOW ${config.targetAllocation?.stFLOW ?? 10}%
 - Drift threshold: ${config.driftThreshold ?? 5}%
-- Agent status: ${(await redis.get("mentoguard:agent_state").then(r => r ? JSON.parse(r).status : "unknown"))}`;
+- Agent status: ${(await redis.get("flowvault:agent_state").then(r => r ? JSON.parse(r).status : "unknown"))}`;
 
     const res = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -94,9 +93,9 @@ export async function handleTextMessage(ctx: Context): Promise<void> {
         messages: [
           {
             role: "system",
-            content: `You are MentoGuard's configuration assistant. The user is sending a natural language command to configure their portfolio agent.
+            content: `You are FlowVault's configuration assistant. The user is sending a natural language command to configure their DAO treasury agent.
 Parse the user's intent and call the appropriate tool.
-Supported tokens: cUSD, cEUR, CELO, cBRL, cREAL.
+Supported tokens: FLOW, USDC, USDT, stFLOW.
 If the user says "more aggressive" → lower drift threshold. "more conservative" → raise it.
 If percentages don't sum to 100, normalise them proportionally before calling the tool.`,
           },
@@ -116,7 +115,7 @@ If percentages don't sum to 100, normalise them proportionally before calling th
 
     const call = data.choices[0]?.message?.tool_calls?.[0];
     if (!call) {
-      await ctx.reply("I didn't understand that. Try: \"set target to 60% cUSD 40% cEUR\" or \"set threshold to 3%\"");
+      await ctx.reply("I didn't understand that. Try: \"set target to 60% FLOW 40% USDC\" or \"set threshold to 3%\"");
       return;
     }
 
@@ -124,35 +123,34 @@ If percentages don't sum to 100, normalise them proportionally before calling th
 
     if (call.function.name === "update_allocation") {
       const newAlloc = {
-        cUSD:  args.cUSD  ?? config.targetAllocation?.cUSD  ?? 45,
-        cEUR:  args.cEUR  ?? config.targetAllocation?.cEUR  ?? 10,
-        CELO:  args.CELO  ?? config.targetAllocation?.CELO  ?? 45,
-        cBRL:  args.cBRL  ?? config.targetAllocation?.cBRL  ?? 0,
-        cREAL: args.cREAL ?? config.targetAllocation?.cREAL ?? 0,
+        FLOW:   args.FLOW   ?? config.targetAllocation?.FLOW   ?? 40,
+        USDC:   args.USDC   ?? config.targetAllocation?.USDC   ?? 30,
+        USDT:   args.USDT   ?? config.targetAllocation?.USDT   ?? 20,
+        stFLOW: args.stFLOW ?? config.targetAllocation?.stFLOW ?? 10,
       };
-      await redis.set("mentoguard:user_config", JSON.stringify({ ...config, targetAllocation: newAlloc }));
+      await redis.set("flowvault:user_config", JSON.stringify({ ...config, targetAllocation: newAlloc }));
       await ctx.reply(
-        `✅ Target allocation updated:\n\ncUSD: ${newAlloc.cUSD}%\ncEUR: ${newAlloc.cEUR}%\nCELO: ${newAlloc.CELO}%\ncBRL: ${newAlloc.cBRL}%\n\nAgent will rebalance towards this on next tick.`
+        `✅ Target allocation updated:\n\nFLOW: ${newAlloc.FLOW}%\nUSDC: ${newAlloc.USDC}%\nUSDT: ${newAlloc.USDT}%\nstFLOW: ${newAlloc.stFLOW}%\n\nAgent will rebalance towards this on next tick.`
       );
 
     } else if (call.function.name === "update_threshold") {
-      await redis.set("mentoguard:user_config", JSON.stringify({ ...config, driftThreshold: args.driftThreshold }));
+      await redis.set("flowvault:user_config", JSON.stringify({ ...config, driftThreshold: args.driftThreshold }));
       await ctx.reply(`✅ Drift threshold set to ${args.driftThreshold}%\n\nAgent will rebalance when any token drifts more than ${args.driftThreshold}% from target.`);
 
     } else if (call.function.name === "pause_agent") {
-      const stateRaw = await redis.get("mentoguard:agent_state");
+      const stateRaw = await redis.get("flowvault:agent_state");
       const state = stateRaw ? JSON.parse(stateRaw) : {};
-      await redis.set("mentoguard:agent_state", JSON.stringify({ ...state, status: "stopped" }));
+      await redis.set("flowvault:agent_state", JSON.stringify({ ...state, status: "stopped" }));
       await ctx.reply("⏸️ Agent paused. Send \"resume\" to restart.");
 
     } else if (call.function.name === "resume_agent") {
-      const stateRaw = await redis.get("mentoguard:agent_state");
+      const stateRaw = await redis.get("flowvault:agent_state");
       const state = stateRaw ? JSON.parse(stateRaw) : {};
-      await redis.set("mentoguard:agent_state", JSON.stringify({ ...state, status: "active" }));
+      await redis.set("flowvault:agent_state", JSON.stringify({ ...state, status: "active" }));
       await ctx.reply("▶️ Agent resumed. Rebalancing will continue on next tick.");
 
     } else {
-      await ctx.reply(`I can help you configure your agent. Try:\n\n• "set target to 60% cUSD 40% cEUR"\n• "set threshold to 3%"\n• "be more aggressive"\n• "pause" / "resume"\n\n${args.suggestion ?? ""}`);
+      await ctx.reply(`I can help you configure your agent. Try:\n\n• "set target to 60% FLOW 40% USDC"\n• "set threshold to 3%"\n• "be more aggressive"\n• "pause" / "resume"\n\n${args.suggestion ?? ""}`);
     }
 
   } catch (err) {

@@ -1,4 +1,4 @@
-import type { TickResult, UserConfig } from "@mentoguard/shared";
+import type { TickResult, UserConfig } from "@flowvault/shared";
 import Redis from "ioredis";
 import type { YieldRates } from "./yields";
 
@@ -8,6 +8,8 @@ const BASE_URL = process.env.HERMES_BASE_URL ?? "https://inference-api.nousresea
 const API_KEY  = process.env.HERMES_API_KEY ?? "";
 const MODEL    = process.env.HERMES_MODEL || "hermes-4-70b";
 
+const FLOW_TOKENS_ENUM = ["FLOW", "USDC", "USDT", "stFLOW"] as const;
+
 // ─── Tool definitions ────────────────────────────────────────────────────────
 
 const TOOLS = [
@@ -15,14 +17,14 @@ const TOOLS = [
     type: "function",
     function: {
       name: "execute_swap",
-      description: "Execute a token swap to rebalance the portfolio. Use this when drift is significant and a rebalance will improve alignment with the target allocation.",
+      description: "Execute a token swap to rebalance the DAO treasury. Use when drift exceeds threshold and rebalancing improves alignment with the target allocation.",
       parameters: {
         type: "object",
         properties: {
-          fromToken: { type: "string", enum: ["cUSD", "cEUR", "cBRL", "cREAL", "CELO"], description: "Token to sell" },
-          toToken:   { type: "string", enum: ["cUSD", "cEUR", "cBRL", "cREAL", "CELO"], description: "Token to buy" },
+          fromToken: { type: "string", enum: FLOW_TOKENS_ENUM, description: "Token to sell" },
+          toToken:   { type: "string", enum: FLOW_TOKENS_ENUM, description: "Token to buy" },
           amountUSD: { type: "number", description: "USD value to swap" },
-          reason:    { type: "string", description: "Plain-English explanation of why this swap is needed" },
+          reason:    { type: "string", description: "Plain-English explanation stored on-chain as a Flow event" },
         },
         required: ["fromToken", "toToken", "amountUSD", "reason"],
       },
@@ -32,7 +34,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "send_alert",
-      description: "Send a Telegram alert to the user without executing a swap. Use for drift warnings, market observations, or status updates.",
+      description: "Send a Telegram alert to the DAO admin without executing a swap. Use for drift warnings, market observations, or status updates.",
       parameters: {
         type: "object",
         properties: {
@@ -46,14 +48,14 @@ const TOOLS = [
   {
     type: "function",
     function: {
-      name: "deposit_to_aave",
-      description: "Deposit idle stablecoins into Aave V3 on Celo to earn yield. Use when portfolio is balanced and a token has more balance than needed.",
+      name: "deposit_to_yield",
+      description: "Deposit idle stablecoins (USDC or USDT) into a Flow yield protocol (IncrementFi lending) to earn yield. Use when portfolio is balanced and stablecoins are sitting idle.",
       parameters: {
         type: "object",
         properties: {
-          token:     { type: "string", enum: ["cUSD", "cEUR", "CELO"], description: "Token to deposit" },
+          token:     { type: "string", enum: ["USDC", "USDT"], description: "Stablecoin to deposit" },
           amountUSD: { type: "number", description: "USD value to deposit" },
-          reason:    { type: "string", description: "Why depositing — e.g. earning yield on idle cUSD" },
+          reason:    { type: "string", description: "Why depositing — e.g. earning yield on idle USDC" },
         },
         required: ["token", "amountUSD", "reason"],
       },
@@ -62,12 +64,12 @@ const TOOLS = [
   {
     type: "function",
     function: {
-      name: "withdraw_from_aave",
-      description: "Withdraw stablecoins from Aave V3 back to wallet. Use before a swap if wallet balance is insufficient.",
+      name: "withdraw_from_yield",
+      description: "Withdraw stablecoins from a Flow yield protocol back to the treasury wallet. Use before a rebalance swap if wallet balance is insufficient.",
       parameters: {
         type: "object",
         properties: {
-          token:     { type: "string", enum: ["cUSD", "cEUR", "CELO"], description: "Token to withdraw" },
+          token:     { type: "string", enum: ["USDC", "USDT"], description: "Stablecoin to withdraw" },
           amountUSD: { type: "number", description: "USD value to withdraw" },
           reason:    { type: "string", description: "Why withdrawing" },
         },
@@ -78,8 +80,25 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "reserve_expense",
+      description: "Ring-fence stablecoins for an upcoming DAO expense BEFORE rebalancing. Call this when a rebalance would reduce the stable reserve below a required payment amount. This emits a Flow event with the reason — creating a permanent on-chain audit trail.",
+      parameters: {
+        type: "object",
+        properties: {
+          token:          { type: "string", enum: ["USDC", "USDT"], description: "Stablecoin to ring-fence" },
+          amountUSD:      { type: "number", description: "USD value to reserve" },
+          reason:         { type: "string", description: "Plain-English reason — stored on-chain as a Flow event" },
+          daysUntilNeeded: { type: "number", description: "Days until the payment is due" },
+        },
+        required: ["token", "amountUSD", "reason", "daysUntilNeeded"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "hold",
-      description: "Take no action this tick. Use when the portfolio is within acceptable bounds or conditions don't warrant action.",
+      description: "Take no action this tick. Use when the portfolio is within acceptable bounds or conditions do not warrant action.",
       parameters: {
         type: "object",
         properties: {
@@ -112,103 +131,131 @@ export interface HoldDecision {
   reason: string;
 }
 
-export interface AaveDecision {
-  action: "deposit_to_aave" | "withdraw_from_aave";
+export interface YieldDecision {
+  action: "deposit_to_yield" | "withdraw_from_yield";
   token: string;
   amountUSD: number;
   reason: string;
 }
 
-export type AgentDecision = SwapDecision | AlertDecision | HoldDecision | AaveDecision;
+export interface ReserveExpenseDecision {
+  action: "reserve_expense";
+  token: string;
+  amountUSD: number;
+  reason: string;
+  daysUntilNeeded: number;
+}
+
+export type AgentDecision = SwapDecision | AlertDecision | HoldDecision | YieldDecision | ReserveExpenseDecision;
 
 // ─── Decision loop ────────────────────────────────────────────────────────────
 
 export async function decideAction(
   result: TickResult,
   config: UserConfig,
-  aavePositions?: Record<string, number>
+  yieldPositions?: Record<string, number>
 ): Promise<AgentDecision[]> {
   const totalUSD = result.balances.reduce((s, b) => s + b.balanceUSD, 0);
 
   // Load yield rates from Redis (fetched by monitor each tick)
   let yieldContext = "";
   try {
-    const yieldsRaw = await redis.get("mentoguard:yield_rates");
+    const yieldsRaw = await redis.get("flowvault:yield_rates");
     if (yieldsRaw) {
       const yields = JSON.parse(yieldsRaw) as YieldRates;
-      const fmt = (ops: YieldRates["cUSD"]) =>
+      const fmt = (ops: YieldRates["USDC"]) =>
         ops.length ? ops.map(o => `${o.protocol} ${o.apy.toFixed(2)}% APY`).join(", ") : "none found";
-      yieldContext = `\nYield opportunities on Celo:\n  cUSD: ${fmt(yields.cUSD)}\n  cEUR: ${fmt(yields.cEUR)}`;
+      yieldContext = `\nFlow yield opportunities:\n  USDC: ${fmt(yields.USDC)}\n  USDT: ${fmt(yields.USDT)}`;
     }
-  } catch {}
+  } catch { /* ignore */ }
 
-  const aaveContext = aavePositions && Object.values(aavePositions).some(v => v > 0)
-    ? `\nAave V3 positions (earning yield):\n${Object.entries(aavePositions).map(([t, v]) => `  ${t}: $${v.toFixed(2)}`).join("\n")}`
-    : "\nAave V3 positions: none (idle funds not earning yield)";
+  const yieldCtx = yieldPositions && Object.values(yieldPositions).some(v => v > 0)
+    ? `\nYield positions (earning yield):\n${Object.entries(yieldPositions).map(([t, v]) => `  ${t}: $${v.toFixed(2)}`).join("\n")}`
+    : "\nYield positions: none (stablecoins not earning yield)";
 
-  // Load market signals (price momentum) from Redis
+  // Load market signals from Redis
   let marketContext = "";
   try {
-    const raw = await redis.get("mentoguard:market_signals");
+    const raw = await redis.get("flowvault:market_signals");
     if (raw) {
-      const signals = JSON.parse(raw) as { celo24hChange: number };
-      const dir = signals.celo24hChange > 0 ? "▲" : "▼";
-      const abs = Math.abs(signals.celo24hChange).toFixed(2);
-      const sentiment = Math.abs(signals.celo24hChange) > 5
-        ? signals.celo24hChange > 0 ? "strong uptrend" : "strong downtrend"
-        : Math.abs(signals.celo24hChange) > 2
-          ? signals.celo24hChange > 0 ? "mild uptrend" : "mild downtrend"
+      const signals = JSON.parse(raw) as { flow24hChange: number };
+      const dir = signals.flow24hChange > 0 ? "▲" : "▼";
+      const abs = Math.abs(signals.flow24hChange).toFixed(2);
+      const sentiment = Math.abs(signals.flow24hChange) > 5
+        ? signals.flow24hChange > 0 ? "strong uptrend" : "strong downtrend"
+        : Math.abs(signals.flow24hChange) > 2
+          ? signals.flow24hChange > 0 ? "mild uptrend" : "mild downtrend"
           : "stable";
-      marketContext = `\nMarket signals (24h):\n  CELO: ${dir}${abs}% (${sentiment})`;
+      marketContext = `\nMarket signals (24h):\n  FLOW: ${dir}${abs}% (${sentiment})`;
     }
-  } catch {}
+  } catch { /* ignore */ }
+
+  // Build DAO expense context if available
+  let expenseContext = "";
+  if (config.daoConfig?.expenseSchedule?.length) {
+    const now = Date.now();
+    const upcoming = config.daoConfig.expenseSchedule
+      .filter(e => e.dueDate > now)
+      .sort((a, b) => a.dueDate - b.dueDate)
+      .slice(0, 3);
+    if (upcoming.length) {
+      const lines = upcoming.map(e => {
+        const days = Math.ceil((e.dueDate - now) / 86400_000);
+        return `  - ${e.description}: $${e.amountUSD.toFixed(0)} ${e.token} in ${days}d`;
+      });
+      expenseContext = `\nDAO upcoming expenses:\n${lines.join("\n")}`;
+    }
+  }
 
   const context = `
 Portfolio value: $${totalUSD.toFixed(2)}
 Current allocation:
-  cUSD:  ${result.currentAllocation.cUSD.toFixed(2)}% (target: ${config.targetAllocation.cUSD}%)
-  cEUR:  ${result.currentAllocation.cEUR.toFixed(2)}% (target: ${config.targetAllocation.cEUR}%)
-  cBRL:  ${result.currentAllocation.cBRL.toFixed(2)}% (target: ${config.targetAllocation.cBRL}%)
-  cREAL: ${result.currentAllocation.cREAL.toFixed(2)}% (target: ${config.targetAllocation.cREAL}%)
+  FLOW:   ${result.currentAllocation.FLOW.toFixed(2)}% (target: ${config.targetAllocation.FLOW}%)
+  USDC:   ${result.currentAllocation.USDC.toFixed(2)}% (target: ${config.targetAllocation.USDC}%)
+  USDT:   ${result.currentAllocation.USDT.toFixed(2)}% (target: ${config.targetAllocation.USDT}%)
+  stFLOW: ${result.currentAllocation.stFLOW.toFixed(2)}% (target: ${config.targetAllocation.stFLOW}%)
 
 Drift from target:
-  cUSD:  ${result.drift.cUSD > 0 ? "+" : ""}${result.drift.cUSD.toFixed(2)}%
-  cEUR:  ${result.drift.cEUR > 0 ? "+" : ""}${result.drift.cEUR.toFixed(2)}%
-  cBRL:  ${result.drift.cBRL > 0 ? "+" : ""}${result.drift.cBRL.toFixed(2)}%
-  cREAL: ${result.drift.cREAL > 0 ? "+" : ""}${result.drift.cREAL.toFixed(2)}%
+  FLOW:   ${result.drift.FLOW > 0 ? "+" : ""}${result.drift.FLOW.toFixed(2)}%
+  USDC:   ${result.drift.USDC > 0 ? "+" : ""}${result.drift.USDC.toFixed(2)}%
+  USDT:   ${result.drift.USDT > 0 ? "+" : ""}${result.drift.USDT.toFixed(2)}%
+  stFLOW: ${result.drift.stFLOW > 0 ? "+" : ""}${result.drift.stFLOW.toFixed(2)}%
 
-FX rates (USD equivalent):
-  cEUR:  $${result.rates.cEUR.toFixed(4)}
-  cBRL:  $${result.rates.cBRL.toFixed(4)}
-  cREAL: $${result.rates.cREAL.toFixed(4)}
+Token prices (USD):
+  FLOW:   $${result.rates.FLOW.toFixed(4)}
+  USDC:   $${result.rates.USDC.toFixed(4)}
+  USDT:   $${result.rates.USDT.toFixed(4)}
+  stFLOW: $${result.rates.stFLOW.toFixed(4)}
 
-User rules:
+DAO rules:
   Drift threshold: ${config.driftThreshold}%
   Max single swap: $${config.rules.maxSwapAmountUSD}
   Max daily volume: $${config.rules.maxDailyVolumeUSD}
 ${marketContext}
 ${yieldContext}
-${aaveContext}
+${yieldCtx}
+${expenseContext}
 `.trim();
 
-  const systemPrompt = `You are MentoGuard, an autonomous FX hedging agent for Celo stablecoins.
-Your job is to analyze the portfolio, weigh market conditions, and call the right tool.
+  const systemPrompt = `You are FlowVault, an autonomous treasury management agent for Flow DAOs.
+Your job is to analyze the DAO treasury, weigh market conditions and upcoming expenses, then call the right tool.
 
 Decision rules:
-1. If ANY token drift EXCEEDS the threshold AND portfolio value > $0: call execute_swap. Sell the most overweight token, buy the most underweight. Amount = min(overweight USD value, max single swap).
-   - Exception: if CELO is in a strong downtrend (>5% down 24h) and you would be buying CELO, consider whether the FX hedge benefit outweighs the momentum risk. If drift is only slightly above threshold (< 2x threshold), you MAY hold and send_alert instead.
-2. If drift is between 80%-100% of threshold: call send_alert only.
-3. If all drift is below 80% of threshold AND idle stablecoins are not earning yield: call deposit_to_aave to put idle cUSD or cEUR to work. Only if Aave positions < 50% of that token's wallet balance.
-4. If all drift is below 80% of threshold AND funds are already in Aave: call hold.
+1. EXPENSE CHECK FIRST: If any upcoming expense (within 90 days) requires stablecoins and a rebalance would reduce stable reserves below the required amount — call reserve_expense BEFORE any swap.
+2. If ANY token drift EXCEEDS the threshold AND portfolio value > $0: call execute_swap. Sell the most overweight token, buy the most underweight. Amount = min(overweight USD value, max single swap).
+   - Exception: if FLOW is in a strong downtrend (>5% down 24h) and you would be buying FLOW, consider whether the rebalance benefit outweighs the momentum risk. If drift is only slightly above threshold (< 2x threshold), you MAY hold and send_alert instead.
+3. If drift is between 80%-100% of threshold: call send_alert only.
+4. If all drift is below 80% of threshold AND idle USDC/USDT are not earning yield: call deposit_to_yield to put idle stablecoins to work.
+5. If all drift is below 80% of threshold AND stablecoins are already in yield: call hold.
 
 Market timing guidance:
-- Strong uptrend (>5% 24h): rebalancing into CELO is favorable — act on smaller drift.
-- Strong downtrend (>5% 24h): rebalancing into CELO carries momentum risk — require drift to clearly exceed threshold.
-- Stable market: follow the standard drift rules strictly.
+- Strong uptrend (>5% 24h): rebalancing into FLOW is favorable — act on smaller drift.
+- Strong downtrend (>5% 24h): rebalancing into FLOW carries momentum risk — require drift to clearly exceed threshold.
+- Stable market: follow standard drift rules strictly.
 
-IMPORTANT: If drift exceeds threshold, default is execute_swap. Only override with send_alert if market conditions are extreme and drift is marginal.
+IMPORTANT: Every reason string you provide is stored as a permanent Flow event on-chain. Be specific and auditable. Bad: "rebalancing". Good: "FLOW drifted +8.2% above target due to 24h price appreciation — selling FLOW to restore USDC ratio before Q2 payroll reserve."
 
-Before calling a tool, briefly state your reasoning in 1-2 sentences — what you observe, what the market signals suggest, and why you chose this action over alternatives.`;
+Before calling a tool, briefly state your reasoning in 1-2 sentences — what you observe, what market signals suggest, and why you chose this action over alternatives.`;
 
   const res = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
@@ -246,7 +293,7 @@ Before calling a tool, briefly state your reasoning in 1-2 sentences — what yo
   // Capture and persist Hermes's reasoning text (shown in dashboard activity feed)
   const reasoning = data.choices[0]?.message?.content;
   if (reasoning?.trim()) {
-    await redis.set("mentoguard:last_reasoning", JSON.stringify({
+    await redis.set("flowvault:last_reasoning", JSON.stringify({
       text: reasoning.trim(),
       timestamp: Date.now(),
     }), "EX", 300);
@@ -261,14 +308,22 @@ Before calling a tool, briefly state your reasoning in 1-2 sentences — what yo
   const decisions: AgentDecision[] = [];
   for (const call of toolCalls) {
     const args = JSON.parse(call.function.arguments);
-    if (call.function.name === "execute_swap") {
-      decisions.push({ action: "execute_swap", ...args });
-    } else if (call.function.name === "send_alert") {
-      decisions.push({ action: "send_alert", ...args });
-    } else if (call.function.name === "deposit_to_aave" || call.function.name === "withdraw_from_aave") {
-      decisions.push({ action: call.function.name, token: args.token, amountUSD: args.amountUSD, reason: args.reason });
-    } else {
-      decisions.push({ action: "hold", reason: args.reason ?? "Holding" });
+    switch (call.function.name) {
+      case "execute_swap":
+        decisions.push({ action: "execute_swap", ...args });
+        break;
+      case "send_alert":
+        decisions.push({ action: "send_alert", ...args });
+        break;
+      case "deposit_to_yield":
+      case "withdraw_from_yield":
+        decisions.push({ action: call.function.name, token: args.token, amountUSD: args.amountUSD, reason: args.reason });
+        break;
+      case "reserve_expense":
+        decisions.push({ action: "reserve_expense", token: args.token, amountUSD: args.amountUSD, reason: args.reason, daysUntilNeeded: args.daysUntilNeeded });
+        break;
+      default:
+        decisions.push({ action: "hold", reason: args.reason ?? "Holding" });
     }
   }
 
@@ -283,10 +338,10 @@ export async function answerPortfolioQuestion(
 ): Promise<string> {
   const { result, totalUSD } = context;
 
-  const contextBlock = `Portfolio value: $${totalUSD.toFixed(2)}
-Allocation: cUSD ${result.currentAllocation.cUSD.toFixed(1)}%, cEUR ${result.currentAllocation.cEUR.toFixed(1)}%, cBRL ${result.currentAllocation.cBRL.toFixed(1)}%, cREAL ${result.currentAllocation.cREAL.toFixed(1)}%
+  const contextBlock = `DAO treasury value: $${totalUSD.toFixed(2)}
+Allocation: FLOW ${result.currentAllocation.FLOW.toFixed(1)}%, USDC ${result.currentAllocation.USDC.toFixed(1)}%, USDT ${result.currentAllocation.USDT.toFixed(1)}%, stFLOW ${result.currentAllocation.stFLOW.toFixed(1)}%
 Drift: ${Object.entries(result.drift).map(([t, d]) => `${t}: ${(d as number) > 0 ? "+" : ""}${(d as number).toFixed(1)}%`).join(", ")}
-FX rates: cEUR=$${result.rates.cEUR.toFixed(4)}, cBRL=$${result.rates.cBRL.toFixed(4)}
+Prices: FLOW=$${result.rates.FLOW.toFixed(4)}, USDC=$${result.rates.USDC.toFixed(4)}, stFLOW=$${result.rates.stFLOW.toFixed(4)}
 Rebalance needed: ${result.shouldRebalance ? "YES" : "NO"}`;
 
   const res = await fetch(`${BASE_URL}/chat/completions`, {
@@ -298,7 +353,7 @@ Rebalance needed: ${result.shouldRebalance ? "YES" : "NO"}`;
     body: JSON.stringify({
       model: MODEL,
       messages: [
-        { role: "system", content: "You are MentoGuard, an autonomous FX hedging agent for Mento stablecoins on Celo. Be concise and precise. No markdown." },
+        { role: "system", content: "You are FlowVault, an autonomous DAO treasury manager on Flow. Be concise and precise. No markdown." },
         { role: "user", content: `${contextBlock}\n\nUser question: ${question}` },
       ],
       temperature: 0.4,

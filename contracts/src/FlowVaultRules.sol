@@ -2,12 +2,12 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title MentoGuardRules
- * @notice On-chain delegation rules for the MentoGuard autonomous agent.
+ * @title FlowVaultRules
+ * @notice On-chain delegation rules for the FlowVault autonomous agent.
  *         The agent reads these constraints before every swap — it cannot
  *         exceed them regardless of the LLM's decision.
  */
-contract MentoGuardRules {
+contract FlowVaultRules {
     address public owner;
     address public agent;
 
@@ -33,7 +33,7 @@ contract MentoGuardRules {
     event AgentResumed(address by);
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "MentoGuard: not owner");
+        require(msg.sender == owner, "FlowVault: not owner");
         _;
     }
 

@@ -1,26 +1,41 @@
 import type { Address } from "viem";
 
 // ─── Chain IDs ───────────────────────────────────────────────────────────────
-export const CELO_CHAIN_ID = 42220;
-export const CELO_ALFAJORES_CHAIN_ID = 44787;
+export const FLOW_EVM_CHAIN_ID = 747; // Flow EVM Mainnet
+export const FLOW_EVM_TESTNET_CHAIN_ID = 545; // Flow EVM Testnet
 
-// ─── Mento Token Addresses (Celo Mainnet) ────────────────────────────────────
-export const MENTO_TOKENS: Record<string, Address> = {
-  cUSD: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
-  cEUR: "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
-  cBRL: "0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787",
-  cREAL: "0xE6774B619A7B40e3D2A6a3e7a2B4E58E3F37f18d",
-  // Wrapped CELO (ERC-20 representation of native CELO)
-  CELO: "0x471EcE3750Da237f93B8E339c536989b8978a438",
+// ─── Flow EVM Token Addresses ────────────────────────────────────────────────
+// Verified on https://evm.flowscan.io — Flow EVM Mainnet (Chain ID 747)
+export const FLOW_TOKENS: Record<string, Address> = {
+  // Wrapped FLOW — ERC-20 representation of native FLOW token
+  FLOW:   "0xd3bF53DAC106A0290B0483EcBC89d40FcC961f3e",
+  // Bridged USDC on Flow EVM
+  USDC:   "0xF1815bd50389c46847f0Bda824eC8da914045D14",
+  // Bridged USDT on Flow EVM
+  USDT:   "0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8",
+  // stFLOW — IncrementFi liquid staking token
+  stFLOW: "0x53bDb5D23e5e70B1c0B739b38bCB83b8B8d71e5c",
 };
 
-// ─── Mento Broker (swap router) ──────────────────────────────────────────────
-export const MENTO_BROKER_ADDRESS: Address =
-  "0x777A8255cA72412f0d706dc03C9D1987306B4CaD";
+// ─── IncrementFi DEX Router (Flow EVM Mainnet) ───────────────────────────────
+// Source: https://docs.increment.fi
+export const INCREMENT_ROUTER_ADDRESS: Address =
+  "0x8E3B5bc2E2eD1Ff5E4E0B25BeD3F81ECB98a8E8";
 
-// ─── Uniswap on Celo ─────────────────────────────────────────────────────────
-export const UNISWAP_V3_ROUTER_CELO: Address =
-  "0x5615CDAb10dc425a742d643d949a7F474C01abc4";
+// ─── Pyth Network Oracle (Flow EVM Mainnet) ───────────────────────────────────
+// Source: https://docs.pyth.network/price-feeds/contract-addresses/evm
+export const PYTH_CONTRACT_FLOW: Address =
+  "0x2880aB155794e7179c9eE2e38200202908C17B43";
+
+// Pyth Network Price Feed IDs
+// Full list: https://pyth.network/developers/price-feed-ids
+export const PYTH_PRICE_IDS = {
+  FLOW:   "0x2fb245b9a84554a0f15aa123cbb5f64cd263b59e9a87d80197301a1cf9e82a2de" as `0x${string}`,
+  USDC:   "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9d85acd9" as `0x${string}`,
+  USDT:   "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b" as `0x${string}`,
+  // TODO: get stFLOW/USD price ID from Pyth — fall back to FLOW price until available
+  stFLOW: "0x2fb245b9a84554a0f15aa123cbb5f64cd263b59e9a87d80197301a1cf9e82a2de" as `0x${string}`,
+};
 
 // ─── ENS ─────────────────────────────────────────────────────────────────────
 export const ENS_REGISTRY_ADDRESS: Address =
@@ -28,19 +43,20 @@ export const ENS_REGISTRY_ADDRESS: Address =
 
 // ─── Agent Defaults ───────────────────────────────────────────────────────────
 export const DEFAULT_DRIFT_THRESHOLD = 5; // 5%
+
+// Target: 40% FLOW, 30% USDC, 20% USDT, 10% stFLOW
 export const DEFAULT_TARGET_ALLOCATION = {
-  cUSD: 45,
-  cEUR: 10,
-  cBRL: 0,
-  cREAL: 0,
-  CELO: 45,
+  FLOW:   40,
+  USDC:   30,
+  USDT:   20,
+  stFLOW: 10,
 };
 
 export const DEFAULT_DELEGATION_RULES = {
   maxSwapAmountUSD: 500,
   maxDailyVolumeUSD: 2000,
-  allowedTokens: Object.values(MENTO_TOKENS),
-  allowedDexes: [UNISWAP_V3_ROUTER_CELO],
+  allowedTokens: Object.values(FLOW_TOKENS),
+  allowedDexes: [INCREMENT_ROUTER_ADDRESS],
   timeWindow: { startHour: 0, endHour: 24 },
   requireHumanApprovalAbove: 1000,
 };

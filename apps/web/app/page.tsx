@@ -66,7 +66,7 @@ export default function LandingPage() {
 
         <div style={{ position: "relative", zIndex: 10, maxWidth: "48rem" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", marginBottom: "2rem" }}>
-            <span style={{ fontWeight: 700, fontSize: "1.125rem", letterSpacing: "-0.02em", color: "#191918" }}>🛡️ MentoGuard</span>
+            <span style={{ fontWeight: 700, fontSize: "1.125rem", letterSpacing: "-0.02em", color: "#191918" }}>🛡️ FlowVault</span>
             <span className="pulse-green" style={{ width: 6, height: 6, borderRadius: "50%", background: "#28C840", display: "inline-block" }} />
           </div>
           <h1 style={{ fontSize: "clamp(2rem,5vw,3.75rem)", fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 1.5rem", color: "#191918" }}>
@@ -95,7 +95,7 @@ export default function LandingPage() {
       <main style={{ maxWidth: 1000, margin: "calc(-10vh - 50px) auto 0", position: "relative", zIndex: 10, padding: "0 1.5rem 120px" }}>
         <div className="m-card" style={{ marginBottom: "1.5rem" }}>
           <p style={{ textAlign: "center", fontSize: "1rem", lineHeight: 1.7, color: "rgba(25,25,24,0.65)", maxWidth: "40rem", margin: "0 auto 2.5rem" }}>
-            MentoGuard builds <strong style={{ color: "#191918", fontWeight: 500 }}>autonomous rebalancing agents</strong> for FX stablecoins on Celo. Smart delegation, on-chain execution, and Filecoin-backed memory.
+            FlowVault builds <strong style={{ color: "#191918", fontWeight: 500 }}>autonomous rebalancing agents</strong> for FX stablecoins on Celo. Smart delegation, on-chain execution, and Filecoin-backed memory.
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", border: "1px solid rgba(25,25,24,0.12)", borderRadius: 8 }}>
@@ -147,7 +147,7 @@ export default function LandingPage() {
         display: "flex", alignItems: "center", gap: "2rem", zIndex: 100,
         boxShadow: "0 10px 30px rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)",
       }}>
-        <span style={{ fontWeight: 700, color: "white", fontSize: "0.875rem", letterSpacing: "-0.02em" }}>🛡️ MentoGuard</span>
+        <span style={{ fontWeight: 700, color: "white", fontSize: "0.875rem", letterSpacing: "-0.02em" }}>🛡️ FlowVault</span>
         <span style={{ width: 1, height: 16, background: "rgba(255,255,255,0.15)" }} />
         {[["Dashboard", "/dashboard"], ["Docs", "#"], ["Pricing", "#"]].map(([label, href]) => (
           <Link key={label} href={href} style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>

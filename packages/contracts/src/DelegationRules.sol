@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /**
  * @title DelegationRules
- * @notice EIP-7710 caveat enforcement for MentoGuard autonomous agent.
+ * @notice EIP-7710 caveat enforcement for FlowVault autonomous agent.
  *         These caveats are checked onchain — the agent CANNOT exceed them
  *         even if the backend is compromised.
  */

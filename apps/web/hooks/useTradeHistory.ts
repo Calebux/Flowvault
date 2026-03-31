@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { Trade } from "@mentoguard/shared";
+import type { Trade } from "@flowvault/shared";
 
 export function useTradeHistory() {
   const { data, isLoading } = useQuery<{ trades: Trade[] }>({

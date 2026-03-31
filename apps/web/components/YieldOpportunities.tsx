@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 interface YieldOpp { protocol: string; symbol: string; apy: number; tvlUsd: number; }
-interface YieldRates { cUSD: YieldOpp[]; cEUR: YieldOpp[]; updatedAt: number; }
+interface YieldRates { USDC: YieldOpp[]; USDT: YieldOpp[]; updatedAt: number; }
 
 export function YieldOpportunities() {
   const [yields, setYields] = useState<YieldRates | null>(null);
@@ -17,15 +17,15 @@ export function YieldOpportunities() {
   }, []);
 
   const all = [
-    ...(yields?.cUSD ?? []).map(o => ({ ...o, token: "cUSD" })),
-    ...(yields?.cEUR ?? []).map(o => ({ ...o, token: "cEUR" })),
+    ...(yields?.USDC ?? []).map(o => ({ ...o, token: "USDC" })),
+    ...(yields?.USDT ?? []).map(o => ({ ...o, token: "USDT" })),
   ].sort((a, b) => b.apy - a.apy).slice(0, 4);
 
   return (
     <div className="m-card">
       <p className="m-label" style={{ marginBottom: "1rem" }}>Yield Opportunities</p>
       {all.length === 0 ? (
-        <span style={{ fontSize: "0.75rem", color: "rgba(25,25,24,0.35)" }}>Fetching Celo DeFi yields…</span>
+        <span style={{ fontSize: "0.75rem", color: "rgba(25,25,24,0.35)" }}>Fetching Flow DeFi yields…</span>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           {all.map((o, i) => (

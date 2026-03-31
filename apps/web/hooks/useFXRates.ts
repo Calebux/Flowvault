@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { FXRates } from "@mentoguard/shared";
+import type { FXRates } from "@flowvault/shared";
 
 export function useFXRates() {
   const { data, isLoading } = useQuery<FXRates>({

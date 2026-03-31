@@ -1,7 +1,7 @@
 import { createPublicClient, http } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
-import { ENS_REGISTRY_ADDRESS } from "@mentoguard/shared";
+import { ENS_REGISTRY_ADDRESS } from "@flowvault/shared";
 
 const ensClient = createPublicClient({
   chain: mainnet,

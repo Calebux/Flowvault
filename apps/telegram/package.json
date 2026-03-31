@@ -1,5 +1,5 @@
 {
-  "name": "@mentoguard/telegram",
+  "name": "@flowvault/telegram",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@mentoguard/shared": "workspace:*",
+    "@flowvault/shared": "workspace:*",
     "axios": "^1.7.9",
     "dotenv": "^17.3.1",
     "ioredis": "^5.4.1",

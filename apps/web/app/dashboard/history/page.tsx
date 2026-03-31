@@ -1,7 +1,7 @@
 "use client";
 
 import { useTradeHistory } from "@/hooks/useTradeHistory";
-import { formatUSD } from "@mentoguard/shared";
+import { formatUSD } from "@flowvault/shared";
 
 export default function HistoryPage() {
   const { trades, isLoading } = useTradeHistory();
@@ -51,7 +51,7 @@ export default function HistoryPage() {
                   <td className="px-4 py-3">{formatUSD(parseFloat(t.fromAmount))}</td>
                   <td className="px-4 py-3 font-mono text-xs text-text-secondary">
                     <a
-                      href={`https://explorer.celo.org/tx/${t.txHash}`}
+                      href={`https://evm.flowscan.io/tx/${t.txHash}`}
                       target="_blank"
                       rel="noreferrer"
                       className="hover:text-accent-primary underline"

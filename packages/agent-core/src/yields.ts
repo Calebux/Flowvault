@@ -10,8 +10,8 @@ export interface YieldOpportunity {
 }
 
 export interface YieldRates {
-  cUSD: YieldOpportunity[];
-  cEUR: YieldOpportunity[];
+  USDC: YieldOpportunity[];
+  USDT: YieldOpportunity[];
   updatedAt: number;
 }
 
@@ -23,14 +23,15 @@ export async function fetchYieldRates(): Promise<YieldRates> {
     if (!res.ok) throw new Error(`DeFiLlama error: ${res.status}`);
     const data = await res.json() as { data: Record<string, unknown>[] };
 
-    const celoPools = data.data.filter((p) =>
-      (p.chain as string) === "Celo" &&
+    // Filter for Flow chain pools with meaningful APY and TVL
+    const flowPools = data.data.filter((p) =>
+      (p.chain as string) === "Flow" &&
       typeof p.apy === "number" && (p.apy as number) > 0 &&
       typeof p.tvlUsd === "number" && (p.tvlUsd as number) > 500
     );
 
     const pick = (keyword: string): YieldOpportunity[] =>
-      celoPools
+      flowPools
         .filter((p) => (p.symbol as string).toLowerCase().includes(keyword))
         .map((p) => ({
           protocol: p.project as string,
@@ -42,20 +43,20 @@ export async function fetchYieldRates(): Promise<YieldRates> {
         .slice(0, 3);
 
     const rates: YieldRates = {
-      cUSD: pick("cusd"),
-      cEUR: pick("ceur"),
+      USDC: pick("usdc"),
+      USDT: pick("usdt"),
       updatedAt: Date.now(),
     };
 
-    await redis.set("mentoguard:yield_rates", JSON.stringify(rates), "EX", 300);
+    await redis.set("flowvault:yield_rates", JSON.stringify(rates), "EX", 300);
 
-    const bestCUSD = rates.cUSD[0]?.apy ?? 0;
-    const bestCEUR = rates.cEUR[0]?.apy ?? 0;
-    console.log(`[yields] Best APY — cUSD: ${bestCUSD.toFixed(2)}%  cEUR: ${bestCEUR.toFixed(2)}%`);
+    const bestUSDC = rates.USDC[0]?.apy ?? 0;
+    const bestUSDT = rates.USDT[0]?.apy ?? 0;
+    console.log(`[yields] Best APY — USDC: ${bestUSDC.toFixed(2)}%  USDT: ${bestUSDT.toFixed(2)}%`);
 
     return rates;
   } catch (err) {
     console.warn("[yields] Fetch failed:", (err as Error).message);
-    return { cUSD: [], cEUR: [], updatedAt: Date.now() };
+    return { USDC: [], USDT: [], updatedAt: Date.now() };
   }
 }

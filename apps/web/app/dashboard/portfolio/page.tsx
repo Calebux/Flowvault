@@ -3,7 +3,7 @@
 import { ExposureDonut } from "@/components/ExposureDonut";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useFXRates } from "@/hooks/useFXRates";
-import { formatUSD } from "@mentoguard/shared";
+import { formatUSD } from "@flowvault/shared";
 
 export default function PortfolioPage() {
   const { balances, isLoading } = usePortfolio();

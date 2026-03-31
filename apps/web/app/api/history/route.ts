@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Redis from "ioredis";
-import { FILECOIN_GATEWAY } from "@mentoguard/shared";
+import { FILECOIN_GATEWAY } from "@flowvault/shared";
 
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 
@@ -15,7 +15,7 @@ async function fetchFromFilecoin(cid: string): Promise<Record<string, unknown> |
 }
 
 export async function GET() {
-  const cids = await redis.lrange("mentoguard:rebalance_cids", 0, 9);
+  const cids = await redis.lrange("flowvault:rebalance_cids", 0, 9);
 
   if (cids.length === 0) {
     return NextResponse.json({ trades: [] });
@@ -29,8 +29,8 @@ export async function GET() {
         return {
           id: `trade-${i}`,
           timestamp: (entry.timestamp as number) ?? Date.now() - i * 3600_000,
-          fromToken: d.fromToken ?? "cUSD",
-          toToken: d.toToken ?? "cEUR",
+          fromToken: d.fromToken ?? "USDC",
+          toToken: d.toToken ?? "FLOW",
           fromAmount: d.fromAmount?.toString() ?? "0",
           toAmount: d.toAmount?.toString() ?? "0",
           txHash: (entry.txHash as string) ?? "0x" + "0".repeat(64),
@@ -42,8 +42,8 @@ export async function GET() {
       return {
         id: `trade-${i}`,
         timestamp: Date.now() - i * 3600_000,
-        fromToken: "cUSD",
-        toToken: "cEUR",
+        fromToken: "USDC",
+        toToken: "FLOW",
         fromAmount: "0",
         toAmount: "0",
         txHash: "0x" + "0".repeat(64),

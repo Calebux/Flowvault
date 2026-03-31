@@ -1,40 +1,27 @@
 import { NextResponse } from "next/server";
 import Redis from "ioredis";
-import type { FXRates } from "@mentoguard/shared";
+import type { FXRates } from "@flowvault/shared";
 
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 
-async function fetchFromForex(): Promise<FXRates> {
-  const res = await fetch(
-    "https://api.frankfurter.app/latest?base=USD&symbols=EUR,BRL",
-    { next: { revalidate: 60 } }
-  );
-  if (!res.ok) throw new Error(`Frankfurter API error: ${res.status}`);
-  const data = (await res.json()) as { rates: { EUR: number; BRL: number } };
-  const eurUSD = 1 / data.rates.EUR;
-  const brlUSD = 1 / data.rates.BRL;
-  return {
-    cUSD:  1.0,
-    cEUR:  eurUSD,
-    cBRL:  brlUSD,
-    cREAL: brlUSD,
-    CELO:  0.5, // fallback price; agent-core will overwrite with live CoinGecko price
-    updatedAt: Date.now(),
-  };
-}
+const FLOW_PRICE_FALLBACK: FXRates = {
+  FLOW:   0.5,
+  USDC:   1.0,
+  USDT:   1.0,
+  stFLOW: 0.525,
+  updatedAt: Date.now(),
+};
 
 export async function GET() {
   try {
-    // Agent-core writes this every 60s
-    const cached = await redis.get("mentoguard:fx_rates");
+    // Agent-core writes this key every 60s via Pyth oracle
+    const cached = await redis.get("flowvault:token_prices");
     if (cached) return NextResponse.json(JSON.parse(cached));
 
-    // Fallback: fetch directly from forex API
-    const rates = await fetchFromForex();
-    return NextResponse.json(rates);
+    // Fallback: return hardcoded prices until agent writes live data
+    return NextResponse.json(FLOW_PRICE_FALLBACK);
   } catch (err) {
     console.error("[api/fx-rates]", err);
-    const fallback: FXRates = { cUSD: 1.0, cEUR: 1.08, cBRL: 0.2, cREAL: 0.18, CELO: 0.5, updatedAt: Date.now() };
-    return NextResponse.json(fallback);
+    return NextResponse.json(FLOW_PRICE_FALLBACK);
   }
 }

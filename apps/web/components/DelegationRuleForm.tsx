@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { DEFAULT_DELEGATION_RULES } from "@mentoguard/shared";
-import type { DelegationRules } from "@mentoguard/shared";
+import { DEFAULT_DELEGATION_RULES } from "@flowvault/shared";
+import type { DelegationRules } from "@flowvault/shared";
 
 function Slider({
   label,

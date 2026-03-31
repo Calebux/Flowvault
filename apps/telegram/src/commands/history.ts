@@ -1,7 +1,7 @@
 import type { Context } from "telegraf";
 import axios from "axios";
 
-export async function historyCommand(ctx: Context) {
+export async function historyCommand(ctx: Context): Promise<void> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const res = await axios.get(`${appUrl}/api/history`);
   const { trades } = res.data as {
@@ -15,7 +15,8 @@ export async function historyCommand(ctx: Context) {
   };
 
   if (trades.length === 0) {
-    return ctx.reply("No trades yet.");
+    await ctx.reply("No trades yet.");
+    return;
   }
 
   const lines = trades.slice(0, 10).map((t) => {

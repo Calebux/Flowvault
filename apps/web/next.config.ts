@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@mentoguard/shared"],
+  transpilePackages: ["@flowvault/shared"],
   serverExternalPackages: ["@walletconnect/universal-provider", "@walletconnect/ethereum-provider"],
   webpack: (config, { isServer }) => {
     if (isServer) {

@@ -7,6 +7,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 const NAV = [
   { href: "/dashboard",           label: "Overview"  },
   { href: "/dashboard/portfolio", label: "Portfolio" },
+  { href: "/dashboard/treasury",  label: "Treasury"  },
   { href: "/dashboard/rules",     label: "Rules"     },
   { href: "/dashboard/history",   label: "History"   },
   { href: "/dashboard/identity",  label: "Identity"  },
@@ -24,7 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         position: "sticky", top: 0, zIndex: 50,
       }}>
         <Link href="/" style={{ fontWeight: 700, fontSize: "0.95rem", letterSpacing: "-0.02em", color: "#191918", textDecoration: "none", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          🛡️ <span>MentoGuard</span>
+          🛡️ <span>FlowVault</span>
         </Link>
 
         <nav style={{ display: "flex", gap: "0.25rem", marginLeft: "0.5rem" }}>
@@ -62,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         display: "flex", alignItems: "center", gap: "1.5rem", zIndex: 100,
         boxShadow: "0 8px 24px rgba(0,0,0,0.18)", border: "1px solid rgba(255,255,255,0.08)",
       }}>
-        <span style={{ fontWeight: 700, color: "white", fontSize: "0.8rem" }}>🛡️ MentoGuard</span>
+        <span style={{ fontWeight: 700, color: "white", fontSize: "0.8rem" }}>🛡️ FlowVault</span>
         <span style={{ width: 1, height: 14, background: "rgba(255,255,255,0.15)" }} />
         {NAV.map(({ href, label }) => (
           <Link key={href} href={href} style={{

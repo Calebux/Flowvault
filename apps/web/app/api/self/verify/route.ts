@@ -4,7 +4,7 @@ import Redis from "ioredis";
 
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 
-const scope = process.env.SELF_APP_SCOPE ?? "mentoguard";
+const scope = process.env.SELF_APP_SCOPE ?? "flowvault";
 const endpoint =
   process.env.SELF_VERIFICATION_ENDPOINT ?? "http://localhost:3000/api/self/verify";
 
@@ -35,11 +35,11 @@ export async function POST(req: Request) {
 
     // Persist verified status in Redis — agent reads this when loading user config
     try {
-      const cfg = await redis.get("mentoguard:user_config");
+      const cfg = await redis.get("flowvault:user_config");
       const config = cfg ? JSON.parse(cfg) : {};
       config.selfVerified = true;
       config.selfNullifier = result.discloseOutput.nullifier;
-      await redis.set("mentoguard:user_config", JSON.stringify(config));
+      await redis.set("flowvault:user_config", JSON.stringify(config));
     } catch (redisErr) {
       console.warn("[self-verify] Redis save failed:", redisErr);
     }

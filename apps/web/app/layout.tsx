@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "MentoGuard — Autonomous FX Hedging on Celo",
+  title: "FlowVault — Autonomous FX Hedging on Celo",
   description:
     "Autonomous stablecoin rebalancing agent for Mento currency pairs. Set rules once, let the agent work.",
 };

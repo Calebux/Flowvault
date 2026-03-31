@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../.. && pnpm --filter @mentoguard/shared build && pnpm --filter @mentoguard/web build",
+  "buildCommand": "cd ../.. && pnpm --filter @flowvault/shared build && pnpm --filter @flowvault/web build",
   "outputDirectory": ".next",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": "nextjs"

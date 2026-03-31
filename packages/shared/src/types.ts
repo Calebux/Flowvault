@@ -1,29 +1,28 @@
 import type { Address } from "viem";
 
-// ─── Token types ────────────────────────────────────────────────────────────
+// ─── Token types ─────────────────────────────────────────────────────────────
 
-export type MentoToken = "cUSD" | "cEUR" | "cBRL" | "cREAL" | "CELO";
+export type FlowToken = "FLOW" | "USDC" | "USDT" | "stFLOW";
 
 export interface TokenBalance {
-  token: MentoToken;
+  token: FlowToken;
   address: Address;
   balance: bigint;
   balanceUSD: number;
 }
 
 export interface Allocation {
-  token: MentoToken;
+  token: FlowToken;
   percentage: number; // 0–100
 }
 
-// ─── FX Rates ────────────────────────────────────────────────────────────────
+// ─── Token Prices (USD) ───────────────────────────────────────────────────────
 
 export interface FXRates {
-  cUSD: number;
-  cEUR: number;
-  cBRL: number;
-  cREAL: number;
-  CELO: number;
+  FLOW: number;
+  USDC: number;
+  USDT: number;
+  stFLOW: number;
   updatedAt: number; // unix timestamp
 }
 
@@ -40,14 +39,13 @@ export interface AgentState {
   uptime: number; // seconds
 }
 
-// ─── User Config ─────────────────────────────────────────────────────────────
+// ─── User / DAO Config ────────────────────────────────────────────────────────
 
 export interface TargetAllocation {
-  cUSD: number;
-  cEUR: number;
-  cBRL: number;
-  cREAL: number;
-  CELO: number;
+  FLOW: number;
+  USDC: number;
+  USDT: number;
+  stFLOW: number;
 }
 
 export interface DelegationRules {
@@ -70,6 +68,23 @@ export interface UserConfig {
   selfVerified: boolean;
   ensName: string | null;
   telegramChatId: string | null;
+  daoConfig?: DAOConfig; // optional DAO-specific config
+}
+
+// ─── DAO Treasury ─────────────────────────────────────────────────────────────
+
+export interface ExpenseEntry {
+  description: string;
+  amountUSD: number;
+  token: FlowToken;
+  dueDate: number; // unix timestamp
+}
+
+export interface DAOConfig {
+  daoName: string;
+  expenseSchedule: ExpenseEntry[];
+  multiSigSigners: Address[];
+  multiSigThreshold: number; // USD amount requiring multi-sig
 }
 
 // ─── Trade History ────────────────────────────────────────────────────────────
@@ -77,8 +92,8 @@ export interface UserConfig {
 export interface Trade {
   id: string;
   timestamp: number;
-  fromToken: MentoToken;
-  toToken: MentoToken;
+  fromToken: FlowToken;
+  toToken: FlowToken;
   fromAmount: string;
   toAmount: string;
   txHash: string;
@@ -106,11 +121,10 @@ export interface AgentMemoryEntry {
 // ─── Monitor ─────────────────────────────────────────────────────────────────
 
 export interface DriftMap {
-  cUSD: number;
-  cEUR: number;
-  cBRL: number;
-  cREAL: number;
-  CELO: number;
+  FLOW: number;
+  USDC: number;
+  USDT: number;
+  stFLOW: number;
 }
 
 export interface TickResult {

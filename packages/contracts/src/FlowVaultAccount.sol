@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "./DelegationRules.sol";
 
 /**
- * @title MentoGuardAccount
+ * @title FlowVaultAccount
  * @notice ERC-4337 Smart Account with EIP-7710 delegation caveats.
  *         The agent executes swaps through this account — it cannot exceed
  *         the rules set by the human owner, even if compromised.
@@ -12,7 +12,7 @@ import "./DelegationRules.sol";
  * @dev In production this extends MetaMask Delegation Toolkit's DeleGator.
  *      This is a standalone reference implementation for hackathon purposes.
  */
-contract MentoGuardAccount {
+contract FlowVaultAccount {
     // ─── State ────────────────────────────────────────────────────────────────
 
     address public owner;

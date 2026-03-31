@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function ENSSetup({ onRegistered }: Props) {
-  const [name, setName] = useState("mentoguard");
+  const [name, setName] = useState("flowvault");
   const [state, setState] = useState<"idle" | "registering" | "done">("idle");
 
   const handleRegister = () => {
@@ -33,14 +33,14 @@ export function ENSSetup({ onRegistered }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
           className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono"
-          placeholder="mentoguard"
+          placeholder="flowvault"
         />
         <span className="text-text-secondary text-sm">.agent.eth</span>
       </div>
 
       <div className="bg-background rounded-lg p-3 text-xs font-mono text-text-secondary space-y-1">
-        <p>description: Autonomous FX hedging agent</p>
-        <p>agent.capabilities: fx-hedging,stablecoin-rebalancing,celo</p>
+        <p>description: Autonomous DAO treasury manager on Flow</p>
+        <p>agent.capabilities: treasury-rebalancing,yield-deployment,expense-reserve,flow-evm</p>
         <p>agent.selfVerified: true</p>
       </div>
 

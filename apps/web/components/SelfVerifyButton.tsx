@@ -15,8 +15,8 @@ export function SelfVerifyButton({ onVerified }: Props) {
 
   const handleStart = () => {
     const app = new SelfAppBuilder({
-      appName: "MentoGuard",
-      scope: process.env.NEXT_PUBLIC_SELF_APP_SCOPE ?? "mentoguard",
+      appName: "FlowVault",
+      scope: process.env.NEXT_PUBLIC_SELF_APP_SCOPE ?? "flowvault",
       endpoint: process.env.NEXT_PUBLIC_SELF_VERIFICATION_ENDPOINT ?? "/api/self/verify",
       userId: uuidv4(),
       disclosures: {

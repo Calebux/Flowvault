@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useAccount, useSignTypedData } from "wagmi";
-import { DEFAULT_DELEGATION_RULES, DEFAULT_DRIFT_THRESHOLD, DEFAULT_TARGET_ALLOCATION } from "@mentoguard/shared";
+import { DEFAULT_DELEGATION_RULES, DEFAULT_DRIFT_THRESHOLD, DEFAULT_TARGET_ALLOCATION } from "@flowvault/shared";
 
 interface Props {
   ensName: string | null;
@@ -11,9 +11,9 @@ interface Props {
 }
 
 const DELEGATION_DOMAIN = {
-  name: "MentoGuard",
+  name: "FlowVault",
   version: "1",
-  chainId: 42220, // Celo mainnet
+  chainId: 747, // Flow EVM mainnet
 } as const;
 
 const DELEGATION_TYPES = {

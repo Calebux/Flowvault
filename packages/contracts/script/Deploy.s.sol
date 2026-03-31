@@ -4,11 +4,11 @@ pragma solidity ^0.8.24;
 import "forge-std/Script.sol";
 import "../src/DelegationRules.sol";
 import "../src/AgentRegistry.sol";
-import "../src/MentoGuardAccount.sol";
+import "../src/FlowVaultAccount.sol";
 
 contract Deploy is Script {
     function run() external {
-        uint256 deployerKey = vm.envUint("CELO_PRIVATE_KEY");
+        uint256 deployerKey = vm.envUint("FLOW_PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);
 
         vm.startBroadcast(deployerKey);
@@ -21,15 +21,15 @@ contract Deploy is Script {
         AgentRegistry registry = new AgentRegistry();
         console.log("AgentRegistry:", address(registry));
 
-        // 3. Deploy MentoGuardAccount for deployer
-        MentoGuardAccount account = new MentoGuardAccount(deployer, address(rules));
-        console.log("MentoGuardAccount:", address(account));
+        // 3. Deploy FlowVaultAccount for deployer
+        FlowVaultAccount account = new FlowVaultAccount(deployer, address(rules));
+        console.log("FlowVaultAccount:", address(account));
 
         vm.stopBroadcast();
 
         console.log("\n=== Deployment Complete ===");
         console.log("Update .env with:");
-        console.log("  MM_DELEGATION_CONTRACT=", address(rules));
-        console.log("  CELO_SMART_ACCOUNT_ADDRESS=", address(account));
+        console.log("  DELEGATION_RULES_ADDRESS=", address(rules));
+        console.log("  FLOW_SMART_ACCOUNT_ADDRESS=", address(account));
     }
 }

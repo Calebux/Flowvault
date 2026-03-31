@@ -1,12 +1,12 @@
 import type { Context } from "telegraf";
 import Redis from "ioredis";
-import { formatUptime } from "@mentoguard/shared";
-import type { AgentState } from "@mentoguard/shared";
+import { formatUptime } from "@flowvault/shared";
+import type { AgentState } from "@flowvault/shared";
 
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 
 export async function statusCommand(ctx: Context) {
-  const raw = await redis.get("mentoguard:agent_state");
+  const raw = await redis.get("flowvault:agent_state");
   const state: AgentState = raw
     ? JSON.parse(raw)
     : { status: "stopped", uptime: 0, totalTrades: 0, totalFeesUSD: 0 };

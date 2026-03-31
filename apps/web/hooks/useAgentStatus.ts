@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { AgentState } from "@mentoguard/shared";
+import type { AgentState } from "@flowvault/shared";
 
 async function fetchStatus(): Promise<AgentState> {
   const res = await fetch("/api/agent/status");

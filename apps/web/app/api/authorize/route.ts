@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     }
 
     // Load any existing config (e.g. selfVerified set by Self Protocol)
-    const existing = await redis.get("mentoguard:user_config");
+    const existing = await redis.get("flowvault:user_config");
     const prev = existing ? JSON.parse(existing) : {};
 
     const config = {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       selfVerified: prev.selfVerified ?? false,
     };
 
-    await redis.set("mentoguard:user_config", JSON.stringify(config));
+    await redis.set("flowvault:user_config", JSON.stringify(config));
 
     return NextResponse.json({ success: true });
   } catch (err) {

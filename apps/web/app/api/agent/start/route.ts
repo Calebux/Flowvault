@@ -12,7 +12,7 @@ export async function POST() {
     totalFeesUSD: 0,
     uptime: 0,
   };
-  await redis.set("mentoguard:agent_state", JSON.stringify(state));
+  await redis.set("flowvault:agent_state", JSON.stringify(state));
 
   // In production: spawn/signal the agent-core process
   return NextResponse.json({ success: true, state });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { TokenBalance, TargetAllocation } from "@mentoguard/shared";
+import type { TokenBalance, TargetAllocation } from "@flowvault/shared";
 
 interface PortfolioData {
   balances: TokenBalance[];

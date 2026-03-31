@@ -1,5 +1,5 @@
 {
-  "name": "@mentoguard/agent-core",
+  "name": "@flowvault/agent-core",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
@@ -13,7 +13,7 @@
     "memory:init": "tsx src/memory.ts init"
   },
   "dependencies": {
-    "@mentoguard/shared": "workspace:*",
+    "@flowvault/shared": "workspace:*",
     "@metamask/delegation-toolkit": "^0.13.0",
     "axios": "^1.7.9",
     "dotenv": "^17.3.1",

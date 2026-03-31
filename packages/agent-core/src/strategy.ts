@@ -1,14 +1,14 @@
 import type {
   DriftMap,
   TargetAllocation,
-  MentoToken,
+  FlowToken,
   FXRates,
-} from "@mentoguard/shared";
-import { MENTO_TOKENS } from "@mentoguard/shared";
+} from "@flowvault/shared";
+import { FLOW_TOKENS } from "@flowvault/shared";
 
 export interface SwapInstruction {
-  fromToken: MentoToken;
-  toToken: MentoToken;
+  fromToken: FlowToken;
+  toToken: FlowToken;
   fromAddress: `0x${string}`;
   toAddress: `0x${string}`;
   amountUSD: number;
@@ -27,11 +27,11 @@ export function computeRebalanceSwaps(
   const swaps: SwapInstruction[] = [];
 
   // Separate overweight (sell) and underweight (buy) tokens
-  const overweight = (Object.entries(drift) as [MentoToken, number][])
+  const overweight = (Object.entries(drift) as [FlowToken, number][])
     .filter(([, d]) => d > 0)
     .sort(([, a], [, b]) => b - a);
 
-  const underweight = (Object.entries(drift) as [MentoToken, number][])
+  const underweight = (Object.entries(drift) as [FlowToken, number][])
     .filter(([, d]) => d < 0)
     .sort(([, a], [, b]) => a - b);
 
@@ -53,8 +53,8 @@ export function computeRebalanceSwaps(
       swaps.push({
         fromToken,
         toToken,
-        fromAddress: MENTO_TOKENS[fromToken] as `0x${string}`,
-        toAddress: MENTO_TOKENS[toToken] as `0x${string}`,
+        fromAddress: FLOW_TOKENS[fromToken] as `0x${string}`,
+        toAddress: FLOW_TOKENS[toToken] as `0x${string}`,
         amountUSD,
         reason: `Drift: ${fromToken} +${fromDrift.toFixed(1)}% → ${toToken} ${toDrift.toFixed(1)}%`,
       });

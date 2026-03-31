@@ -1,10 +1,11 @@
 import { createPublicClient, http, parseAbi } from "viem";
-import { celo } from "viem/chains";
-import type { DelegationRules } from "@mentoguard/shared";
+import type { DelegationRules } from "@flowvault/shared";
+import { flowMainnet } from "./monitor";
 import type { SwapInstruction } from "./strategy";
 
-// MentoGuardRules contract — deployed on Celo mainnet
-// Source: contracts/src/MentoGuardRules.sol
+// FlowVaultRules contract — deployed on Flow EVM mainnet
+// Source: contracts/cadence/DelegationRules.cdc  (Cadence version preferred)
+// TODO: replace with the deployed Flow EVM contract address
 export const RULES_CONTRACT = "0xba26522a9221a3de4234e8d5e8d52bd8216932c8" as const;
 
 const RULES_ABI = parseAbi([
@@ -12,8 +13,8 @@ const RULES_ABI = parseAbi([
 ]);
 
 const publicClient = createPublicClient({
-  chain: celo,
-  transport: http(process.env.CELO_RPC_URL ?? "https://forno.celo.org"),
+  chain: flowMainnet,
+  transport: http(process.env.FLOW_EVM_RPC_URL ?? "https://mainnet.evm.nodes.onflow.org"),
 });
 
 /** Fetch on-chain delegation rules. Falls back to provided rules if contract call fails. */
@@ -23,7 +24,7 @@ export async function fetchOnChainRules(fallback: DelegationRules): Promise<Dele
       address: RULES_CONTRACT,
       abi: RULES_ABI,
       functionName: "getRules",
-    }) as { maxSwapAmountUSD: bigint; maxDailyVolumeUSD: bigint; driftThreshold: number; paused: boolean; updatedAt: bigint };
+    }) as unknown as { maxSwapAmountUSD: bigint; maxDailyVolumeUSD: bigint; driftThreshold: number; paused: boolean; updatedAt: bigint };
 
     console.log(`[delegation] On-chain rules — maxSwap: $${Number(result.maxSwapAmountUSD) / 100} paused: ${result.paused}`);
     return {
@@ -40,7 +41,7 @@ export async function fetchOnChainRules(fallback: DelegationRules): Promise<Dele
 
 /**
  * Validate a proposed swap against the user's delegation rules.
- * Throws if any rule is violated — enforced both on-chain (MentoGuardRules contract)
+ * Throws if any rule is violated — enforced both on-chain (FlowVaultRules contract)
  * and off-chain here before the transaction is even attempted.
  */
 export function validateDelegationRules(

@@ -15,13 +15,13 @@ export function computeDrift(
   current: TargetAllocation,
   target: TargetAllocation
 ): DriftMap {
-  return {
-    cUSD: current.cUSD - target.cUSD,
-    cEUR: current.cEUR - target.cEUR,
-    cBRL: current.cBRL - target.cBRL,
-    cREAL: current.cREAL - target.cREAL,
-    CELO: current.CELO - target.CELO,
-  };
+  // Dynamic — works for any set of tokens in TargetAllocation
+  return Object.fromEntries(
+    (Object.keys(target) as (keyof TargetAllocation)[]).map((token) => [
+      token,
+      (current[token] ?? 0) - (target[token] ?? 0),
+    ])
+  ) as unknown as DriftMap;
 }
 
 /** Returns true if any token exceeds the drift threshold */

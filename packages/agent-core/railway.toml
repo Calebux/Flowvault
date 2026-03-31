@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm --filter @mentoguard/shared build"
+buildCommand = "pnpm --filter @flowvault/shared build"
 
 [deploy]
 startCommand = "node --loader tsx/esm packages/agent-core/src/index.ts"

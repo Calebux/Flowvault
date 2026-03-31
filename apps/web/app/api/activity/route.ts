@@ -6,9 +6,9 @@ const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 export async function GET() {
   try {
     const [tickRaw, stateRaw, reasoningRaw] = await Promise.all([
-      redis.get("mentoguard:last_tick"),
-      redis.get("mentoguard:agent_state"),
-      redis.get("mentoguard:last_reasoning"),
+      redis.get("flowvault:last_tick"),
+      redis.get("flowvault:agent_state"),
+      redis.get("flowvault:last_reasoning"),
     ]);
 
     const entries: { id: string; time: string; message: string; type: string }[] = [];

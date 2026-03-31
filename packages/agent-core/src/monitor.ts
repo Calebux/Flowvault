@@ -1,97 +1,190 @@
-import { createPublicClient, http, parseAbi, formatUnits } from "viem";
-import { celo } from "viem/chains";
+import { createPublicClient, http, parseAbi, formatUnits, defineChain } from "viem";
 import Redis from "ioredis";
 import {
-  MENTO_TOKENS,
+  FLOW_TOKENS,
+  PYTH_CONTRACT_FLOW,
+  PYTH_PRICE_IDS,
+  FLOW_EVM_CHAIN_ID,
   DEFAULT_TARGET_ALLOCATION,
   computeDrift,
   exceedsThreshold,
-} from "@mentoguard/shared";
+} from "@flowvault/shared";
 import type {
   UserConfig,
   TickResult,
   FXRates,
   TokenBalance,
   TargetAllocation,
-  MentoToken,
-} from "@mentoguard/shared";
+  FlowToken,
+} from "@flowvault/shared";
 import { logTick } from "./memory";
 import { fetchYieldRates } from "./yields";
+
+// ─── Flow EVM chain definition ────────────────────────────────────────────────
+
+export const flowMainnet = defineChain({
+  id: FLOW_EVM_CHAIN_ID,
+  name: "Flow EVM",
+  nativeCurrency: { name: "Flow", symbol: "FLOW", decimals: 18 },
+  rpcUrls: {
+    default: {
+      http: [process.env.FLOW_EVM_RPC_URL ?? "https://mainnet.evm.nodes.onflow.org"],
+    },
+  },
+  blockExplorers: {
+    default: { name: "FlowScan", url: "https://evm.flowscan.io" },
+  },
+});
+
+// ─── Clients ─────────────────────────────────────────────────────────────────
+
+const client = createPublicClient({
+  chain: flowMainnet,
+  transport: http(process.env.FLOW_EVM_RPC_URL ?? "https://mainnet.evm.nodes.onflow.org"),
+});
+
+const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+
+// ─── ABIs ─────────────────────────────────────────────────────────────────────
 
 const ERC20_ABI = parseAbi([
   "function balanceOf(address owner) view returns (uint256)",
   "function decimals() view returns (uint8)",
 ]);
 
-const client = createPublicClient({
-  chain: celo,
-  transport: http(process.env.CELO_RPC_URL ?? "https://forno.celo.org"),
-});
+// Pyth oracle — returns (price, conf, expo, publishTime)
+// price (USD) = price * 10^expo
+const PYTH_ABI = parseAbi([
+  "function getPriceUnsafe(bytes32 id) view returns (int64 price, uint64 conf, int32 expo, uint256 publishTime)",
+  "function getPriceNoOlderThan(bytes32 id, uint256 age) view returns (int64 price, uint64 conf, int32 expo, uint256 publishTime)",
+]);
 
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+// ─── Price fetching via Pyth ──────────────────────────────────────────────────
 
-// Frankfurter is a free, no-key-required forex API backed by the ECB
-// cUSD=USD, cEUR≈EUR/USD, cBRL≈BRL/USD, cREAL≈BRL/USD (same peg)
-export async function fetchFXRates(): Promise<FXRates> {
-  const [fxRes, celoRes] = await Promise.all([
-    fetch("https://api.frankfurter.app/latest?base=USD&symbols=EUR,BRL"),
-    fetch("https://api.coingecko.com/api/v3/simple/price?ids=celo&vs_currencies=usd&include_24hr_change=true"),
-  ]);
-
-  if (!fxRes.ok) throw new Error(`Frankfurter API error: ${fxRes.status}`);
-  const data = (await fxRes.json()) as { rates: { EUR: number; BRL: number } };
-  const eurUSD  = 1 / data.rates.EUR;
-  const brlUSD  = 1 / data.rates.BRL;
-
-  let celoUSD = 0.5; // fallback if CoinGecko is unavailable
-  let celo24hChange = 0;
-  if (celoRes.ok) {
-    const celoData = (await celoRes.json()) as { celo?: { usd?: number; usd_24h_change?: number } };
-    celoUSD = celoData.celo?.usd ?? celoUSD;
-    celo24hChange = celoData.celo?.usd_24h_change ?? 0;
-  }
-
-  // Store market signals in Redis for LLM context
-  await redis.set(
-    "mentoguard:market_signals",
-    JSON.stringify({ celo24hChange, updatedAt: Date.now() }),
-    "EX", 120
-  );
-
-  const rates: FXRates = {
-    cUSD:  1.0,
-    cEUR:  eurUSD,
-    cBRL:  brlUSD,
-    cREAL: brlUSD,
-    CELO:  celoUSD,
-    updatedAt: Date.now(),
-  };
-
-  await redis.set("mentoguard:fx_rates", JSON.stringify(rates), "EX", 120);
-  console.log(
-    `[monitor] FX rates — cEUR: $${rates.cEUR.toFixed(4)}  cBRL: $${rates.cBRL.toFixed(4)}  CELO: $${rates.CELO.toFixed(4)}`
-  );
-  return rates;
+/** Convert Pyth raw price to USD float */
+function pythToUSD(price: bigint, expo: number): number {
+  // price * 10^expo  (expo is typically negative, e.g. -8)
+  return Number(price) * Math.pow(10, expo);
 }
+
+export async function fetchTokenPrices(): Promise<FXRates> {
+  const MAX_PRICE_AGE = 120; // accept prices up to 2 minutes old
+
+  try {
+    const [flowResult, usdcResult, usdtResult, stFlowResult] = await Promise.allSettled([
+      client.readContract({
+        address: PYTH_CONTRACT_FLOW,
+        abi: PYTH_ABI,
+        functionName: "getPriceNoOlderThan",
+        args: [PYTH_PRICE_IDS.FLOW, BigInt(MAX_PRICE_AGE)],
+      }),
+      client.readContract({
+        address: PYTH_CONTRACT_FLOW,
+        abi: PYTH_ABI,
+        functionName: "getPriceNoOlderThan",
+        args: [PYTH_PRICE_IDS.USDC, BigInt(MAX_PRICE_AGE)],
+      }),
+      client.readContract({
+        address: PYTH_CONTRACT_FLOW,
+        abi: PYTH_ABI,
+        functionName: "getPriceNoOlderThan",
+        args: [PYTH_PRICE_IDS.USDT, BigInt(MAX_PRICE_AGE)],
+      }),
+      client.readContract({
+        address: PYTH_CONTRACT_FLOW,
+        abi: PYTH_ABI,
+        functionName: "getPriceNoOlderThan",
+        args: [PYTH_PRICE_IDS.stFLOW, BigInt(MAX_PRICE_AGE)],
+      }),
+    ]);
+
+    // Extract price and expo from tuple results
+    const parseResult = (res: PromiseSettledResult<unknown>, fallback: number): number => {
+      if (res.status !== "fulfilled") return fallback;
+      const [price, , expo] = res.value as [bigint, bigint, number, bigint];
+      const usd = pythToUSD(price, expo);
+      return usd > 0 ? usd : fallback;
+    };
+
+    const flowUSD   = parseResult(flowResult, 0.5);
+    const usdcUSD   = parseResult(usdcResult, 1.0);
+    const usdtUSD   = parseResult(usdtResult, 1.0);
+    const stFlowUSD = parseResult(stFlowResult, flowUSD * 1.05); // stFLOW ≈ FLOW + staking premium
+
+    // Compute FLOW 24h change for market signals
+    // If we have a cached previous price, use it; otherwise skip
+    let flow24hChange = 0;
+    try {
+      const prevRaw = await redis.get("flowvault:token_prices");
+      if (prevRaw) {
+        const prev = JSON.parse(prevRaw) as FXRates;
+        if (prev.FLOW > 0 && Date.now() - prev.updatedAt < 86400_000) {
+          flow24hChange = ((flowUSD - prev.FLOW) / prev.FLOW) * 100;
+        }
+      }
+    } catch { /* redis unavailable — skip */ }
+
+    // Store market signals for LLM context
+    await redis.set(
+      "flowvault:market_signals",
+      JSON.stringify({ flow24hChange, updatedAt: Date.now() }),
+      "EX", 120
+    );
+
+    const rates: FXRates = {
+      FLOW:   flowUSD,
+      USDC:   usdcUSD,
+      USDT:   usdtUSD,
+      stFLOW: stFlowUSD,
+      updatedAt: Date.now(),
+    };
+
+    await redis.set("flowvault:token_prices", JSON.stringify(rates), "EX", 120);
+    console.log(
+      `[monitor] Prices — FLOW: $${rates.FLOW.toFixed(4)}  USDC: $${rates.USDC.toFixed(4)}  stFLOW: $${rates.stFLOW.toFixed(4)}`
+    );
+    return rates;
+
+  } catch (err) {
+    console.warn("[monitor] Pyth price fetch failed, using fallback prices:", (err as Error).message);
+    // Return last known prices from Redis, or hardcoded fallbacks
+    try {
+      const cached = await redis.get("flowvault:token_prices");
+      if (cached) return JSON.parse(cached) as FXRates;
+    } catch { /* ignore */ }
+    return { FLOW: 0.5, USDC: 1.0, USDT: 1.0, stFLOW: 0.525, updatedAt: Date.now() };
+  }
+}
+
+// Keep old name as alias for compatibility
+export const fetchFXRates = fetchTokenPrices;
+
+// ─── Portfolio balances ───────────────────────────────────────────────────────
 
 export async function fetchPortfolioBalances(
   smartAccount: `0x${string}`
 ): Promise<TokenBalance[]> {
-  const tokens = Object.entries(MENTO_TOKENS) as [MentoToken, `0x${string}`][];
+  const tokens = Object.entries(FLOW_TOKENS) as [FlowToken, `0x${string}`][];
 
   const results = await Promise.all(
     tokens.map(async ([token, address]) => {
       try {
-        const balance = await client.readContract({
-          address,
-          abi: ERC20_ABI,
-          functionName: "balanceOf",
-          args: [smartAccount],
-        });
-        return { token, address, balance, balanceUSD: 0 };
+        const [balance, decimals] = await Promise.all([
+          client.readContract({
+            address,
+            abi: ERC20_ABI,
+            functionName: "balanceOf",
+            args: [smartAccount],
+          }),
+          client.readContract({
+            address,
+            abi: ERC20_ABI,
+            functionName: "decimals",
+          }).catch(() => 18 as number),
+        ]);
+        return { token, address, balance: balance as bigint, balanceUSD: 0, decimals: decimals as number };
       } catch {
-        // Token contract may not exist on mainnet — skip with zero balance
-        return { token, address, balance: 0n, balanceUSD: 0 };
+        return { token, address, balance: 0n, balanceUSD: 0, decimals: 18 };
       }
     })
   );
@@ -105,26 +198,26 @@ export function computeAllocation(
 ): TargetAllocation {
   const usdValues = balances.map((b) => ({
     token: b.token,
-    usd: Number(formatUnits(b.balance, 18)) * rates[b.token as keyof typeof rates],
+    usd: Number(formatUnits(b.balance, 18)) * (rates[b.token as keyof FXRates] as number ?? 0),
   }));
 
-  const totalUSD = usdValues.reduce((s, v) => s + (v.usd as number), 0);
+  const totalUSD = usdValues.reduce((s, v) => s + v.usd, 0);
   if (totalUSD === 0) return DEFAULT_TARGET_ALLOCATION;
 
   const pct = (token: string) =>
-    ((usdValues.find((v) => v.token === token)?.usd ?? 0) as number / totalUSD) * 100;
+    ((usdValues.find((v) => v.token === token)?.usd ?? 0) / totalUSD) * 100;
+
   return {
-    cUSD:  pct("cUSD"),
-    cEUR:  pct("cEUR"),
-    cBRL:  pct("cBRL"),
-    cREAL: pct("cREAL"),
-    CELO:  pct("CELO"),
+    FLOW:   pct("FLOW"),
+    USDC:   pct("USDC"),
+    USDT:   pct("USDT"),
+    stFLOW: pct("stFLOW"),
   };
 }
 
 export async function monitorTick(config: UserConfig): Promise<TickResult> {
   const [rates, balances] = await Promise.all([
-    fetchFXRates(),
+    fetchTokenPrices(),
     fetchPortfolioBalances(config.smartAccount),
     fetchYieldRates(), // fire-and-forget into Redis; used by LLM context
   ]);
@@ -135,7 +228,7 @@ export async function monitorTick(config: UserConfig): Promise<TickResult> {
 
   const balancesWithUSD = balances.map((b) => ({
     ...b,
-    balanceUSD: Number(formatUnits(b.balance, 18)) * ((rates[b.token as keyof FXRates] as number) ?? 0),
+    balanceUSD: Number(formatUnits(b.balance, 18)) * (rates[b.token as keyof FXRates] as number ?? 0),
   }));
 
   const result: TickResult = {

@@ -7,8 +7,8 @@ const BASE_URL = process.env.HERMES_BASE_URL ?? "https://inference-api.nousresea
 const API_KEY  = process.env.HERMES_API_KEY ?? "";
 const MODEL    = process.env.HERMES_MODEL ?? "hermes-4-70b";
 
-const SYSTEM = `You are MentoGuard, an autonomous FX hedging agent for Mento stablecoins on Celo.
-You monitor cUSD, cEUR, cBRL and cREAL allocations and rebalance when drift exceeds thresholds.
+const SYSTEM = `You are FlowVault, an autonomous DAO treasury manager on Flow.
+You monitor FLOW, USDC, USDT and stFLOW allocations and rebalance when drift exceeds thresholds.
 Be concise and precise. Never use markdown formatting.`;
 
 async function askHermes(question: string, context: string): Promise<string> {
@@ -42,7 +42,7 @@ export async function askCommand(ctx: Context): Promise<void> {
   await ctx.reply("Thinking…");
 
   try {
-    const tickRaw = await redis.get("mentoguard:last_tick");
+    const tickRaw = await redis.get("flowvault:last_tick");
     if (!tickRaw) {
       await ctx.reply("No tick data yet — the agent may still be starting up.");
       return;
@@ -51,10 +51,10 @@ export async function askCommand(ctx: Context): Promise<void> {
     const result = JSON.parse(tickRaw);
     const totalUSD = (result.balances as { balanceUSD: number }[]).reduce((s: number, b: { balanceUSD: number }) => s + b.balanceUSD, 0);
 
-    const context = `Portfolio value: $${totalUSD.toFixed(2)}
-Allocation: cUSD ${result.currentAllocation.cUSD.toFixed(1)}%, cEUR ${result.currentAllocation.cEUR.toFixed(1)}%, cBRL ${result.currentAllocation.cBRL.toFixed(1)}%, cREAL ${result.currentAllocation.cREAL.toFixed(1)}%
+    const context = `DAO treasury value: $${totalUSD.toFixed(2)}
+Allocation: FLOW ${result.currentAllocation.FLOW.toFixed(1)}%, USDC ${result.currentAllocation.USDC.toFixed(1)}%, USDT ${result.currentAllocation.USDT.toFixed(1)}%, stFLOW ${result.currentAllocation.stFLOW.toFixed(1)}%
 Drift: ${Object.entries(result.drift).map(([t, d]) => `${t}: ${(d as number) > 0 ? "+" : ""}${(d as number).toFixed(1)}%`).join(", ")}
-FX rates: cEUR=$${result.rates.cEUR.toFixed(4)}, cBRL=$${result.rates.cBRL.toFixed(4)}
+Prices: FLOW=$${result.rates.FLOW.toFixed(4)}, stFLOW=$${result.rates.stFLOW.toFixed(4)}
 Rebalance needed: ${result.shouldRebalance ? "YES" : "NO"}`;
 
     const answer = await askHermes(question, context);

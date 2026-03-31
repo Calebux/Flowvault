@@ -4,7 +4,7 @@ import Redis from "ioredis";
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 
 export async function GET() {
-  const raw = await redis.get("mentoguard:agent_state");
+  const raw = await redis.get("flowvault:agent_state");
   if (!raw) {
     return NextResponse.json({
       status: "stopped",

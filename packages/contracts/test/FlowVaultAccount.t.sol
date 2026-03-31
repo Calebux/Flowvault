@@ -4,12 +4,12 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import "../src/DelegationRules.sol";
 import "../src/AgentRegistry.sol";
-import "../src/MentoGuardAccount.sol";
+import "../src/FlowVaultAccount.sol";
 
-contract MentoGuardAccountTest is Test {
+contract FlowVaultAccountTest is Test {
     DelegationRules rules;
     AgentRegistry registry;
-    MentoGuardAccount account;
+    FlowVaultAccount account;
 
     address owner = address(0xA11CE);
     address agent = address(0xA6E47);
@@ -22,7 +22,7 @@ contract MentoGuardAccountTest is Test {
         registry = new AgentRegistry();
 
         vm.prank(owner);
-        account = new MentoGuardAccount(owner, address(rules));
+        account = new FlowVaultAccount(owner, address(rules));
 
         vm.prank(owner);
         account.authorizeAgent(agent);
@@ -83,7 +83,7 @@ contract MentoGuardAccountTest is Test {
         caps[1] = "stablecoin-rebalancing";
 
         vm.prank(agent);
-        registry.register("MentoGuard", "1.0.0", "mentoguard.agent.eth", caps);
+        registry.register("FlowVault", "1.0.0", "flowvault.agent.eth", caps);
 
         assertEq(registry.totalAgents(), 1);
         assertEq(registry.getCapabilities(agent)[0], "fx-hedging");

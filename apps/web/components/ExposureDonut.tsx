@@ -4,11 +4,10 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { usePortfolio } from "@/hooks/usePortfolio";
 
 const COLORS: Record<string, string> = {
-  cUSD:  "#FCAA2D",
-  cEUR:  "#525333",
-  cBRL:  "#c48c5a",
-  cREAL: "#8ba5bb",
-  CELO:  "#35D07F",
+  FLOW:   "#00EF8B", // Flow brand green
+  USDC:   "#2775CA", // USDC blue
+  USDT:   "#26A17B", // USDT teal
+  stFLOW: "#0052FF", // stFLOW blue
 };
 
 export function ExposureDonut() {

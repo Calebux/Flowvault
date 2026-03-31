@@ -1,5 +1,5 @@
 {
-  "name": "@mentoguard/web",
+  "name": "@flowvault/web",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -11,7 +11,7 @@
     "clean": "rm -rf .next"
   },
   "dependencies": {
-    "@mentoguard/shared": "workspace:*",
+    "@flowvault/shared": "workspace:*",
     "@metamask/delegation-toolkit": "^0.13.0",
     "@rainbow-me/rainbowkit": "^2.2.4",
     "@selfxyz/core": "^1.0.0",

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useAgentStatus } from "@/hooks/useAgentStatus";
-import { formatUptime } from "@mentoguard/shared";
+import { formatUptime } from "@flowvault/shared";
 
 export function AgentStatusCard() {
   const { status, start, stop } = useAgentStatus();
