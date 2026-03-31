@@ -264,6 +264,6 @@ export async function stopAgent(): Promise<void> {
   console.log("[FlowVault] Agent stopped.");
 }
 
-if (process.argv[1] === __filename) {
+if (require.main === module) {
   startAgent().catch(console.error);
 }
