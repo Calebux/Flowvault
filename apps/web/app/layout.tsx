@@ -7,9 +7,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "FlowVault — Autonomous FX Hedging on Celo",
+  title: "FlowVault — AI Treasury Manager on Flow",
   description:
-    "Autonomous stablecoin rebalancing agent for Mento currency pairs. Set rules once, let the agent work.",
+    "Autonomous DAO treasury management on Flow. Set delegation rules once — the AI agent monitors runway, enforces guardrails, and rebalances 24/7.",
 };
 
 export default function RootLayout({

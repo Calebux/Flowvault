@@ -129,8 +129,56 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* How it works — 3 steps */}
+        <div style={{ marginTop: "2rem" }}>
+          <p style={{ textAlign: "center", fontFamily: "var(--font-mono, monospace)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "rgba(25,25,24,0.35)", marginBottom: "1.5rem" }}>
+            How it works
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1px", background: "rgba(25,25,24,0.1)", border: "1px solid rgba(25,25,24,0.1)", borderRadius: 8, overflow: "hidden" }}>
+            {[
+              {
+                step: "01",
+                title: "Connect your DAO treasury",
+                body: "Link your Flow wallet. FlowVault reads your token balances and computes your current allocation in real time.",
+              },
+              {
+                step: "02",
+                title: "Set rules & target allocation",
+                body: "Define target token weights (e.g. 40% FLOW, 40% USDC), max swap size, daily volume cap, and operating hours. Stored in a Cadence contract.",
+              },
+              {
+                step: "03",
+                title: "Agent runs 24/7",
+                body: "Hermes AI monitors drift every 15 seconds. When allocation drifts past threshold, it rebalances via IncrementFi — and writes every decision to Flow as a permanent event.",
+              },
+            ].map(({ step, title, body }) => (
+              <div key={step} style={{ padding: "1.5rem", background: "#FFFEF2" }}>
+                <p style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.65rem", color: "rgba(25,25,24,0.3)", marginBottom: "0.625rem" }}>{step}</p>
+                <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "#191918", marginBottom: "0.5rem", lineHeight: 1.3 }}>{title}</p>
+                <p style={{ fontSize: "0.8rem", color: "rgba(25,25,24,0.55)", lineHeight: 1.55 }}>{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Live demo callout */}
+        <div style={{ marginTop: "1.5rem", border: "1px solid rgba(252,170,45,0.3)", borderRadius: 8, padding: "1.25rem 1.5rem", background: "rgba(252,170,45,0.04)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+          <div>
+            <p style={{ fontWeight: 600, fontSize: "0.9rem", color: "#191918", marginBottom: "0.25rem" }}>See it live</p>
+            <p style={{ fontSize: "0.8rem", color: "rgba(25,25,24,0.55)" }}>Open the dashboard to watch Hermes reason about the $841k demo treasury in real time.</p>
+          </div>
+          <Link href="/dashboard" style={{
+            background: "#FCAA2D", color: "#191918", padding: "0.625rem 1.25rem",
+            borderRadius: 6, fontFamily: "var(--font-mono, monospace)", fontSize: "0.65rem",
+            fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
+            display: "inline-flex", alignItems: "center", gap: "0.4rem", textDecoration: "none", whiteSpace: "nowrap",
+          }}>
+            Open Dashboard →
+          </Link>
+        </div>
+
         {/* Feature pills */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", justifyContent: "center" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", justifyContent: "center", marginTop: "1.5rem" }}>
           {["⛓️ Flow Native","🏦 Treasury Management","🤖 AI Agent Execution","🔒 2-of-3 MultiSig","📊 Expense Reserves","🪪 Self Protocol"].map(f => (
             <span key={f} style={{ padding: "0.375rem 0.875rem", borderRadius: "99px", border: "1px solid rgba(25,25,24,0.12)", fontSize: "0.8rem", color: "rgba(25,25,24,0.65)" }}>
               {f}

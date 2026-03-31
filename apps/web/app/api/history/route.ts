@@ -18,6 +18,11 @@ export async function GET() {
   const cids = await redis.lrange("flowvault:rebalance_cids", 0, 9);
 
   if (cids.length === 0) {
+    // Serve demo trades seeded by /api/seed-demo
+    const demoRaw = await redis.get("flowvault:demo_trades");
+    if (demoRaw) {
+      return NextResponse.json({ trades: JSON.parse(demoRaw) });
+    }
     return NextResponse.json({ trades: [] });
   }
 

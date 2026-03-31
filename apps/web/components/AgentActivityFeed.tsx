@@ -18,7 +18,7 @@ export function AgentActivityFeed() {
       } catch {}
     };
     load();
-    const id = setInterval(load, 30_000);
+    const id = setInterval(load, 5_000);
     return () => clearInterval(id);
   }, []);
 

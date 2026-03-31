@@ -84,9 +84,45 @@ export async function GET() {
     );
 
     const totalUSD = balances.reduce((s, b) => s + b.balanceUSD, 0);
+
+    // Fall back to last tick data if EVM returns all zeros (testnet/no balance)
+    if (totalUSD === 0) {
+      const tickFallback = await getTickFallback(targetAllocation);
+      if (tickFallback) return NextResponse.json(tickFallback);
+    }
+
     return NextResponse.json({ balances, targetAllocation, totalUSD: +totalUSD.toFixed(2) });
   } catch (err) {
     console.error("[api/portfolio]", err);
+    // Try tick fallback before returning error
+    try {
+      const targetAllocation = DEFAULT_TARGET_ALLOCATION;
+      const tickFallback = await getTickFallback(targetAllocation);
+      if (tickFallback) return NextResponse.json(tickFallback);
+    } catch { /* ignore */ }
     return NextResponse.json({ error: "Failed to fetch portfolio" }, { status: 500 });
+  }
+}
+
+async function getTickFallback(targetAllocation: typeof DEFAULT_TARGET_ALLOCATION) {
+  try {
+    const tickRaw = await redis.get("flowvault:last_tick");
+    if (!tickRaw) return null;
+    const tick = JSON.parse(tickRaw);
+    const tickTotal = tick.balances?.reduce((s: number, b: { balanceUSD: number }) => s + b.balanceUSD, 0) ?? 0;
+    if (tickTotal <= 0) return null;
+    return {
+      balances: tick.balances.map((b: { token: string; address: string; balanceUSD: number }) => ({
+        token: b.token,
+        address: b.address,
+        balance: "0",
+        balanceUSD: b.balanceUSD,
+      })),
+      targetAllocation,
+      totalUSD: +tickTotal.toFixed(2),
+      source: "tick-cache",
+    };
+  } catch {
+    return null;
   }
 }

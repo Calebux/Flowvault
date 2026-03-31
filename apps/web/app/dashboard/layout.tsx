@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const NAV = [
@@ -13,8 +14,57 @@ const NAV = [
   { href: "/dashboard/identity",  label: "Identity"  },
 ];
 
+function DemoBanner() {
+  const [visible, setVisible] = useState(true);
+  if (!visible) return null;
+  return (
+    <div style={{
+      background: "rgba(252,170,45,0.08)",
+      borderBottom: "1px solid rgba(252,170,45,0.18)",
+      padding: "0.35rem 1.5rem",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.6rem",
+      fontSize: "0.65rem",
+      fontFamily: "var(--font-mono, monospace)",
+      color: "rgba(25,25,24,0.55)",
+      letterSpacing: "0.02em",
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FCAA2D", flexShrink: 0, display: "inline-block" }} />
+      <span>
+        Demo treasury · $841,760 simulated on Flow EVM Testnet · Real AI decisions by Hermes 4 70B
+      </span>
+      <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
+        <a
+          href="https://evm-testnet.flowscan.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#FCAA2D", textDecoration: "none", fontWeight: 600 }}
+        >
+          FlowScan ↗
+        </a>
+        <button
+          onClick={() => setVisible(false)}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(25,25,24,0.3)", fontSize: "0.8rem", lineHeight: 1, padding: 0 }}
+        >
+          ✕
+        </button>
+      </span>
+    </div>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+
+  // Auto-seed Redis with demo data on first dashboard visit per session
+  useEffect(() => {
+    if (sessionStorage.getItem("fv_seeded")) return;
+    fetch("/api/seed-demo", { method: "POST" })
+      .then(() => sessionStorage.setItem("fv_seeded", "1"))
+      .catch(() => {});
+  }, []);
+
   return (
     <div style={{ minHeight: "100vh", background: "#FFFEF2", color: "#191918" }}>
       {/* Top nav */}
@@ -50,6 +100,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <ConnectButton showBalance={false} chainStatus="icon" />
         </div>
       </header>
+
+      {/* Demo mode banner */}
+      <DemoBanner />
 
       <main style={{ padding: "1.75rem 1.5rem 7rem", maxWidth: 1100, margin: "0 auto" }}>
         {children}
