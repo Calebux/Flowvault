@@ -1,0 +1,4 @@
+[options]
+# Don't treat environment variable names found in source as build-time secrets.
+# All secrets are injected at runtime via Railway's Variables tab.
+build_secrets = []
