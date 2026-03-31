@@ -35,6 +35,8 @@ export const flowTestnet = defineChain({
   },
 });
 
+export const flowMainnet = flowTestnet; // alias used by delegation, increment, yield-vaults
+
 // ─── Clients ─────────────────────────────────────────────────────────────────
 
 const client = createPublicClient({
