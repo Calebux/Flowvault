@@ -4,9 +4,10 @@ import Redis from "ioredis";
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 
 export async function POST() {
+  const now = Date.now();
   const state = {
     status: "active",
-    startedAt: Date.now(),
+    startedAt: now,
     lastTickAt: null,
     totalTrades: 0,
     totalFeesUSD: 0,
@@ -14,6 +15,10 @@ export async function POST() {
   };
   await redis.set("flowvault:agent_state", JSON.stringify(state));
 
-  // In production: spawn/signal the agent-core process
+  // Fire a real AI tick immediately so the dashboard shows activity right away.
+  // This runs async — we return to the client immediately.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  fetch(`${appUrl}/api/agent/tick`, { method: "POST" }).catch(() => {});
+
   return NextResponse.json({ success: true, state });
 }
