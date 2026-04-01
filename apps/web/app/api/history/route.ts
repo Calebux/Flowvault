@@ -1,61 +1,65 @@
 import { NextResponse } from "next/server";
-import { FILECOIN_GATEWAY } from "@flowvault/shared";
-
 import redis from "@/lib/redis";
 
-async function fetchFromFilecoin(cid: string): Promise<Record<string, unknown> | null> {
-  try {
-    const res = await fetch(`${FILECOIN_GATEWAY}/ipfs/${cid}`, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
+const ACTION_LABELS: Record<string, string> = {
+  execute_swap:        "Rebalance Swap",
+  deposit_to_yield:    "Yield Deposit",
+  withdraw_from_yield: "Yield Withdrawal",
+  reserve_expense:     "Expense Reserve",
+  send_alert:          "Alert Sent",
+  blocked_by_guardrail:"Guardrail Block",
+  hold:                "Hold — No Action",
+};
 
 export async function GET() {
-  const cids = await redis.lrange("flowvault:rebalance_cids", 0, 9);
+  try {
+    // Primary: reasoning_log entries (written by every tick, always available)
+    const logEntries = await redis.lrange("flowvault:reasoning_log", 0, 29);
 
-  if (cids.length === 0) {
-    // Serve demo trades seeded by /api/seed-demo
+    if (logEntries.length > 0) {
+      const decisions = logEntries.map((raw, i) => {
+        const r = JSON.parse(raw) as {
+          text: string;
+          action: string;
+          timestamp: number;
+          filecoinCid?: string | null;
+        };
+        return {
+          id: `decision-${r.timestamp ?? i}`,
+          timestamp: r.timestamp ?? Date.now() - i * 60_000,
+          action: r.action ?? "hold",
+          actionLabel: ACTION_LABELS[r.action] ?? r.action,
+          reasoning: r.text ?? "",
+          filecoinCid: r.filecoinCid ?? null,
+        };
+      });
+      return NextResponse.json({ decisions });
+    }
+
+    // Fallback: demo decisions seeded by /api/seed-demo
     const demoRaw = await redis.get("flowvault:demo_trades");
     if (demoRaw) {
-      return NextResponse.json({ trades: JSON.parse(demoRaw) });
+      const demoTrades = JSON.parse(demoRaw) as Array<{
+        id: string;
+        timestamp: number;
+        fromToken: string;
+        toToken: string;
+        reasoning: string;
+        filecoinCid?: string;
+      }>;
+      const decisions = demoTrades.map(t => ({
+        id: t.id,
+        timestamp: t.timestamp,
+        action: "execute_swap",
+        actionLabel: `Rebalance — ${t.fromToken} → ${t.toToken}`,
+        reasoning: t.reasoning ?? "",
+        filecoinCid: t.filecoinCid ?? null,
+      }));
+      return NextResponse.json({ decisions });
     }
-    return NextResponse.json({ trades: [] });
+
+    return NextResponse.json({ decisions: [] });
+  } catch {
+    return NextResponse.json({ decisions: [] });
   }
-
-  const trades = await Promise.all(
-    cids.map(async (cid, i) => {
-      const entry = await fetchFromFilecoin(cid);
-      if (entry?.data && typeof entry.data === "object") {
-        const d = entry.data as Record<string, unknown>;
-        return {
-          id: `trade-${i}`,
-          timestamp: (entry.timestamp as number) ?? Date.now() - i * 3600_000,
-          fromToken: d.fromToken ?? "USDC",
-          toToken: d.toToken ?? "FLOW",
-          fromAmount: d.fromAmount?.toString() ?? "0",
-          toAmount: d.toAmount?.toString() ?? "0",
-          txHash: (entry.txHash as string) ?? "0x" + "0".repeat(64),
-          feesUSD: (d.feesUSD as number) ?? 0,
-          filecoinCid: cid,
-        };
-      }
-      // Fallback with CID preserved if Filecoin fetch fails
-      return {
-        id: `trade-${i}`,
-        timestamp: Date.now() - i * 3600_000,
-        fromToken: "USDC",
-        toToken: "FLOW",
-        fromAmount: "0",
-        toAmount: "0",
-        txHash: "0x" + "0".repeat(64),
-        feesUSD: 0,
-        filecoinCid: cid,
-      };
-    })
-  );
-
-  return NextResponse.json({ trades });
 }

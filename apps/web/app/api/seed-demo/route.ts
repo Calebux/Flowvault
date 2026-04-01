@@ -56,35 +56,43 @@ export async function POST() {
         text: "FLOW has appreciated +15.3% in the last 24h, pushing allocation to 36.4% — well above the 25% target. Drift of +11.4% exceeds the 5% threshold. Checking expense schedule before acting: Q2 payroll of $45,000 USDC due in 32 days — stable reserve ($330,966) remains adequate after this swap. Executing FLOW→USDC rebalance.",
         action: "execute_swap",
         timestamp: now - 2 * 3600_000,
+        filecoinCid: "bafybeigdyrzt5sfp7kdmsguj5ah43j4ol4i29szx4c5df0bcwjnle7bfxnh",
       },
       {
         text: "Portfolio balanced after rebalance. Idle USDC balance of $52,000 detected — not currently earning yield. Deploying 80% ($41,600) to IncrementFi USDC lending vault at 4.87% APY. Keeping 20% liquid for gas and future swaps. Telegram notification sent to treasury committee.",
         action: "deposit_to_yield",
         timestamp: now - 110 * 60_000,
+        filecoinCid: "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf4wcq",
       },
       {
         text: "Routine scan — all token drift below 5% threshold. FLOW: +0.3%, USDC: -0.2%, USDT: -0.1%, stFLOW: +0.1%. Market: FLOW up +14.8% (strong uptrend). Expense reserves intact. No rebalance required. Yield positions earning 4.87% APY on $52k USDC. Holding.",
         action: "hold",
         timestamp: now - 95 * 60_000,
+        filecoinCid: null,
       },
       {
-        text: "Second daily rebalance: USDC→stFLOW $249.87 to restore stFLOW toward 10% target. IncrementFi router confirmed. Filecoin record uploaded (CID: bafybei...cq). DAO treasury below multi-sig threshold — no approval required. All 6 delegation rules satisfied.",
+        text: "Second daily rebalance: USDC→stFLOW $249.87 to restore stFLOW toward 10% target. IncrementFi router confirmed. All 6 delegation rules satisfied — swap below $500 cap, within 06:00–22:00 UTC window, daily volume $923.49 of $2,000 limit used.",
         action: "execute_swap",
         timestamp: now - 7 * 3600_000,
+        filecoinCid: "bafybeiemxf5abjwjbikoz4mc3a3dla6ual3jsgpdr4cjr3oz3evfyavhwq",
       },
       {
         text: "Initial treasury scan complete. $841,760 across 4 tokens. FLOW drifted +10.8% above target due to overnight price appreciation. Upcoming expenses loaded: Q2 Payroll $45k (32d), Audit Retainer $25k (58d), Grants $15k (75d). Agent monitoring initialized — will rebalance when drift exceeds 5%.",
         action: "hold",
         timestamp: now - 4 * 3600_000,
+        filecoinCid: null,
       },
     ];
 
-    await redis.del("flowvault:reasoning_log");
-    for (const entry of reasoningEntries) {
-      await redis.lpush("flowvault:reasoning_log", JSON.stringify(entry));
+    // Only seed reasoning_log if empty (don't overwrite real tick data)
+    const existingLog = await redis.llen("flowvault:reasoning_log");
+    if (existingLog === 0) {
+      for (const entry of reasoningEntries) {
+        await redis.lpush("flowvault:reasoning_log", JSON.stringify(entry));
+      }
+      await redis.ltrim("flowvault:reasoning_log", 0, 49);
+      await redis.set("flowvault:last_reasoning", JSON.stringify(reasoningEntries[0]), "EX", 86400);
     }
-    await redis.ltrim("flowvault:reasoning_log", 0, 49);
-    await redis.set("flowvault:last_reasoning", JSON.stringify(reasoningEntries[0]), "EX", 86400);
 
     // ── Yield rates — realistic DeFiLlama-style data for Flow ─────────────────
     const yieldRates = {

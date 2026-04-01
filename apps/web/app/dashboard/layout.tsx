@@ -57,12 +57,9 @@ function DemoBanner() {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
 
-  // Auto-seed Redis with demo data on first dashboard visit per session
+  // Seed Redis with demo data on every dashboard load (seed-demo is idempotent)
   useEffect(() => {
-    if (sessionStorage.getItem("fv_seeded")) return;
-    fetch("/api/seed-demo", { method: "POST" })
-      .then(() => sessionStorage.setItem("fv_seeded", "1"))
-      .catch(() => {});
+    fetch("/api/seed-demo", { method: "POST" }).catch(() => {});
   }, []);
 
   return (

@@ -1,82 +1,134 @@
 "use client";
 
-import { useTradeHistory } from "@/hooks/useTradeHistory";
-import { formatUSD } from "@flowvault/shared";
+import { useQuery } from "@tanstack/react-query";
+
+interface Decision {
+  id: string;
+  timestamp: number;
+  action: string;
+  actionLabel: string;
+  reasoning: string;
+  filecoinCid: string | null;
+}
+
+const ACTION_COLOR: Record<string, string> = {
+  execute_swap:         "#16a34a",
+  deposit_to_yield:     "#2563eb",
+  withdraw_from_yield:  "#7c3aed",
+  reserve_expense:      "#d97706",
+  send_alert:           "#c48c5a",
+  blocked_by_guardrail: "#dc2626",
+  hold:                 "rgba(25,25,24,0.35)",
+};
 
 export default function HistoryPage() {
-  const { trades, isLoading } = useTradeHistory();
+  const { data, isLoading } = useQuery<{ decisions: Decision[] }>({
+    queryKey: ["ai-history"],
+    queryFn: async () => {
+      const res = await fetch("/api/history");
+      if (!res.ok) return { decisions: [] };
+      return res.json();
+    },
+    refetchInterval: 15_000,
+  });
+
+  const decisions = data?.decisions ?? [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Trade History</h1>
-      <p className="text-text-secondary text-sm">
-        Every rebalance is stored permanently on Filecoin via Lighthouse.
-      </p>
-
-      <div className="rounded-xl bg-surface border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left px-4 py-3 text-text-secondary font-medium">Time</th>
-              <th className="text-left px-4 py-3 text-text-secondary font-medium">Swap</th>
-              <th className="text-left px-4 py-3 text-text-secondary font-medium">Amount</th>
-              <th className="text-left px-4 py-3 text-text-secondary font-medium">Tx Hash</th>
-              <th className="text-left px-4 py-3 text-text-secondary font-medium">Filecoin CID</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-text-secondary">
-                  Loading...
-                </td>
-              </tr>
-            ) : trades.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-text-secondary">
-                  No trades yet. The agent will execute swaps when drift exceeds your threshold.
-                </td>
-              </tr>
-            ) : (
-              trades.map((t) => (
-                <tr key={t.id} className="border-b border-border last:border-0 hover:bg-border/20">
-                  <td className="px-4 py-3 font-mono text-xs">
-                    {new Date(t.timestamp).toLocaleTimeString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-accent-primary">{t.fromToken}</span>
-                    {" → "}
-                    <span className="text-accent-primary">{t.toToken}</span>
-                  </td>
-                  <td className="px-4 py-3">{formatUSD(parseFloat(t.fromAmount))}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-text-secondary">
-                    <a
-                      href={`https://evm.flowscan.io/tx/${t.txHash}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="hover:text-accent-primary underline"
-                    >
-                      {t.txHash.slice(0, 10)}...
-                    </a>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-text-secondary">
-                    {t.filecoinCid ? (
-                      <a
-                        href={`https://gateway.lighthouse.storage/ipfs/${t.filecoinCid}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:text-accent-primary underline"
-                      >
-                        {t.filecoinCid.slice(0, 12)}...
-                      </a>
-                    ) : "—"}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div>
+        <h1 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.25rem" }}>AI Decision Log</h1>
+        <p style={{ fontSize: "0.75rem", color: "rgba(25,25,24,0.45)", fontFamily: "var(--font-mono, monospace)" }}>
+          Every Hermes decision is logged here. When LIGHTHOUSE_API_KEY is configured, each entry
+          is uploaded to Filecoin via Lighthouse — permanent, verifiable, tamper-proof.
+        </p>
       </div>
+
+      <div className="m-card" style={{ padding: 0, overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "140px 160px 1fr 130px",
+          gap: "0 1rem",
+          padding: "0.6rem 1rem",
+          borderBottom: "1px solid rgba(25,25,24,0.08)",
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: "0.6rem",
+          color: "rgba(25,25,24,0.35)",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}>
+          <span>Time</span>
+          <span>Action</span>
+          <span>Hermes Reasoning</span>
+          <span>Filecoin CID</span>
+        </div>
+
+        {isLoading ? (
+          <div style={{ padding: "2rem", textAlign: "center", color: "rgba(25,25,24,0.3)", fontFamily: "var(--font-mono, monospace)", fontSize: "0.7rem" }}>
+            Loading...
+          </div>
+        ) : decisions.length === 0 ? (
+          <div style={{ padding: "2rem", textAlign: "center", color: "rgba(25,25,24,0.3)", fontFamily: "var(--font-mono, monospace)", fontSize: "0.7rem" }}>
+            No decisions yet — click ⚡ Trigger AI Tick on the dashboard to generate the first entry.
+          </div>
+        ) : (
+          decisions.map((d, i) => (
+            <div
+              key={d.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "140px 160px 1fr 130px",
+                gap: "0 1rem",
+                padding: "0.75rem 1rem",
+                borderBottom: i < decisions.length - 1 ? "1px solid rgba(25,25,24,0.05)" : "none",
+                alignItems: "start",
+              }}
+            >
+              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.65rem", color: "rgba(25,25,24,0.4)", paddingTop: "0.1rem" }}>
+                {new Date(d.timestamp).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <span style={{
+                fontFamily: "var(--font-mono, monospace)",
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                color: ACTION_COLOR[d.action] ?? "rgba(25,25,24,0.6)",
+                paddingTop: "0.1rem",
+              }}>
+                {d.actionLabel}
+              </span>
+              <span style={{ fontSize: "0.7rem", color: "rgba(25,25,24,0.65)", lineHeight: 1.5 }}>
+                {d.reasoning}
+              </span>
+              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.6rem", paddingTop: "0.1rem" }}>
+                {d.filecoinCid ? (
+                  <a
+                    href={`https://gateway.lighthouse.storage/ipfs/${d.filecoinCid}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "#2563eb", textDecoration: "none" }}
+                    title={d.filecoinCid}
+                  >
+                    {d.filecoinCid.slice(0, 14)}…
+                    <span style={{ marginLeft: "0.25rem", opacity: 0.5 }}>↗</span>
+                  </a>
+                ) : (
+                  <span style={{ color: "rgba(25,25,24,0.2)" }}>— no key set</span>
+                )}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+
+      {decisions.length > 0 && (
+        <p style={{ fontSize: "0.65rem", color: "rgba(25,25,24,0.3)", fontFamily: "var(--font-mono, monospace)" }}>
+          {decisions.length} decision{decisions.length !== 1 ? "s" : ""} recorded
+          {decisions.filter(d => d.filecoinCid).length > 0 && (
+            <> · {decisions.filter(d => d.filecoinCid).length} uploaded to Filecoin</>
+          )}
+        </p>
+      )}
     </div>
   );
 }
