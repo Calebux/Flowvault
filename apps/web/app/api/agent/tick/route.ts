@@ -322,18 +322,52 @@ Before calling a tool, briefly state your reasoning in 1-2 sentences.`;
     await redis.ltrim("flowvault:reasoning_log", 0, 49);
     await redis.set("flowvault:last_reasoning", reasoningEntry, "EX", 3600);
 
+    // Simulate portfolio evolution so each tick shows different context
+    const next = { ...current };
+    if (action === "execute_swap" && toolArgs.fromToken && toolArgs.toToken) {
+      const from = toolArgs.fromToken as keyof typeof next;
+      const to = toolArgs.toToken as keyof typeof next;
+      const swapPct = Math.min(
+        ((toolArgs.amountUSD as number) / totalUSD) * 100,
+        Math.abs(drift[from as keyof typeof drift] ?? 0)
+      );
+      next[from] = Math.max(0, current[from] - swapPct * 0.85);
+      next[to] = Math.min(100, current[to] + swapPct * 0.85);
+    } else if (action === "hold" || action === "deposit_to_yield") {
+      // Slow market drift: FLOW creeps up ~0.4% per tick (simulates appreciation)
+      const rate = 0.4;
+      next.FLOW = Math.min(42, current.FLOW + rate);
+      next.USDC = Math.max(28, current.USDC - rate * 0.7);
+      next.USDT = Math.max(8, current.USDT - rate * 0.2);
+      next.stFLOW = Math.max(6, current.stFLOW - rate * 0.1);
+    }
+    // Normalize to 100%
+    const allocTotal = Object.values(next).reduce((s, v) => s + v, 0);
+    if (allocTotal > 0) {
+      (Object.keys(next) as (keyof typeof next)[]).forEach(k => {
+        next[k] = parseFloat(((next[k] / allocTotal) * 100).toFixed(2));
+      });
+    }
+    const nextDrift = {
+      FLOW:   parseFloat((next.FLOW   - targetAllocation.FLOW).toFixed(2)),
+      USDC:   parseFloat((next.USDC   - targetAllocation.USDC).toFixed(2)),
+      USDT:   parseFloat((next.USDT   - targetAllocation.USDT).toFixed(2)),
+      stFLOW: parseFloat((next.stFLOW - targetAllocation.stFLOW).toFixed(2)),
+    };
+    const nextShouldRebalance = Math.max(...Object.values(nextDrift).map(Math.abs)) > driftThreshold;
+
     // Save tick result to Redis
     const tickResult = {
       rates: prices,
       balances: [
-        { token: "FLOW", address: "0xd3bF53DAC106A0290B0483EcBC89d40FcC961f3e", balanceUSD: (current.FLOW / 100) * totalUSD },
-        { token: "USDC", address: "0xF1815bd50389c46847f0Bda824eC8da914045D14", balanceUSD: (current.USDC / 100) * totalUSD },
-        { token: "USDT", address: "0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8", balanceUSD: (current.USDT / 100) * totalUSD },
-        { token: "stFLOW", address: "0x53bDb5D23e5e70B1c0B739b38bCB83b8B8d71e5c", balanceUSD: (current.stFLOW / 100) * totalUSD },
+        { token: "FLOW",   address: "0xd3bF53DAC106A0290B0483EcBC89d40FcC961f3e", balanceUSD: (next.FLOW   / 100) * totalUSD },
+        { token: "USDC",   address: "0xF1815bd50389c46847f0Bda824eC8da914045D14", balanceUSD: (next.USDC   / 100) * totalUSD },
+        { token: "USDT",   address: "0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8", balanceUSD: (next.USDT   / 100) * totalUSD },
+        { token: "stFLOW", address: "0x53bDb5D23e5e70B1c0B739b38bCB83b8B8d71e5c", balanceUSD: (next.stFLOW / 100) * totalUSD },
       ],
-      currentAllocation: current,
-      drift,
-      shouldRebalance,
+      currentAllocation: next,
+      drift: nextDrift,
+      shouldRebalance: nextShouldRebalance,
       tickAt: Date.now(),
     };
     await redis.set("flowvault:last_tick", JSON.stringify(tickResult));
@@ -354,8 +388,8 @@ Before calling a tool, briefly state your reasoning in 1-2 sentences.`;
       action,
       toolArgs,
       reasoning: reasoning.slice(0, 300),
-      drift,
-      shouldRebalance,
+      drift: nextDrift,
+      shouldRebalance: nextShouldRebalance,
     });
   } catch (err) {
     console.error("[api/agent/tick]", err);

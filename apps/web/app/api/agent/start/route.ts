@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import redis from "@/lib/redis";
+import { startScheduler } from "@/lib/agent-scheduler";
 
 export async function POST() {
   const now = Date.now();
@@ -13,10 +14,8 @@ export async function POST() {
   };
   await redis.set("flowvault:agent_state", JSON.stringify(state));
 
-  // Fire a real AI tick immediately so the dashboard shows activity right away.
-  // This runs async — we return to the client immediately.
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  fetch(`${appUrl}/api/agent/tick`, { method: "POST" }).catch(() => {});
+  // Start the in-process scheduler — fires a Hermes tick every 30s
+  startScheduler(30_000);
 
   return NextResponse.json({ success: true, state });
 }
