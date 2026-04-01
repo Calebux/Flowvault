@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface LogEntry { id: string; time: string; message: string; type: "info" | "success" | "warning"; }
 
-const COLOR = { info: "rgba(25,25,24,0.4)", success: "#16a34a", warning: "#c48c5a", reasoning: "#7c3aed" };
+const COLOR = { info: "rgba(25,25,24,0.4)", success: "#16a34a", warning: "#c48c5a", reasoning: "#7c3aed", error: "#dc2626" };
 
 export function AgentActivityFeed() {
   const [logs, setLogs] = useState<LogEntry[]>([]);

@@ -14,6 +14,7 @@
 
 import redis from "@/lib/redis";
 import { uploadToLighthouse } from "@/lib/filecoin";
+import { DEFAULT_DELEGATION_RULES } from "@flowvault/shared";
 
 const BASE_URL = process.env.HERMES_BASE_URL ?? "https://inference-api.nousresearch.com/v1";
 const API_KEY  = process.env.HERMES_API_KEY ?? "";
@@ -125,6 +126,50 @@ Threshold: ${driftThreshold}%${marketContext}${yieldContext}${expenseContext}`;
       toolArgs = { fromToken, toToken, amountUSD: Math.min(500, (Math.abs(drift[fromToken as keyof Allocation]) / 100) * totalUSD * 0.5), reason: `${fromToken} drifted +${dAbs}% above target — rebalancing to ${toToken}` };
     } else {
       reasoning = `All allocations within ${driftThreshold}% threshold. Max drift: ${Math.max(...Object.values(drift).map(Math.abs)).toFixed(1)}%. Monitoring conditions.`;
+    }
+  }
+
+  // ── Guardrail check ───────────────────────────────────────────────────────────
+  // Load on-chain delegation rules from Redis (set by the Rules page)
+  let rules = DEFAULT_DELEGATION_RULES;
+  try {
+    const rulesRaw = await redis.get("flowvault:delegation_rules");
+    if (rulesRaw) rules = { ...DEFAULT_DELEGATION_RULES, ...JSON.parse(rulesRaw) };
+  } catch { /* use defaults */ }
+
+  let guardrailBlocked = false;
+  let guardrailReason  = "";
+
+  if (action === "execute_swap") {
+    const swapAmount = (toolArgs.amountUSD as number) ?? 0;
+    const nowHour    = new Date().getUTCHours();
+
+    if (swapAmount > rules.maxSwapAmountUSD) {
+      guardrailBlocked = true;
+      guardrailReason  = `BLOCKED by guardrail: swap $${swapAmount.toFixed(0)} exceeds max single-swap limit ($${rules.maxSwapAmountUSD}). Reduce size or raise the limit in Rules.`;
+    } else if (nowHour < rules.timeWindow.startHour || nowHour >= rules.timeWindow.endHour) {
+      guardrailBlocked = true;
+      guardrailReason  = `BLOCKED by guardrail: current hour (${nowHour}:00 UTC) is outside the allowed trading window (${rules.timeWindow.startHour}:00–${rules.timeWindow.endHour}:00 UTC).`;
+    } else if (swapAmount >= rules.requireHumanApprovalAbove) {
+      guardrailBlocked = true;
+      guardrailReason  = `BLOCKED by guardrail: swap $${swapAmount.toFixed(0)} requires multi-sig approval (threshold: $${rules.requireHumanApprovalAbove}). Waiting for DAO signers.`;
+    } else {
+      // Track daily volume
+      const volKey  = "flowvault:daily_volume";
+      const dailyVol = parseFloat((await redis.get(volKey)) ?? "0");
+      if (dailyVol + swapAmount > rules.maxDailyVolumeUSD) {
+        guardrailBlocked = true;
+        guardrailReason  = `BLOCKED by guardrail: daily volume cap reached ($${(dailyVol + swapAmount).toFixed(0)} would exceed $${rules.maxDailyVolumeUSD} limit).`;
+      } else {
+        // Increment daily volume counter (TTL resets at 24h)
+        await redis.set(volKey, (dailyVol + swapAmount).toFixed(2), "EX", 86400);
+      }
+    }
+
+    if (guardrailBlocked) {
+      action    = "blocked_by_guardrail";
+      reasoning = guardrailReason;
+      toolArgs  = { reason: guardrailReason };
     }
   }
 

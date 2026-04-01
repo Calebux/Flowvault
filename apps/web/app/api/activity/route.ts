@@ -45,11 +45,13 @@ export async function GET() {
     // Rolling reasoning log (newest first from Redis LPUSH)
     for (const raw of logEntries) {
       const r = JSON.parse(raw);
+      const isBlocked = r.action === "blocked_by_guardrail";
+      const isSwap    = r.action === "execute_swap";
       entries.push({
         id: `reasoning-${r.timestamp}`,
         time: new Date(r.timestamp).toLocaleTimeString(),
-        message: r.text,
-        type: "reasoning",
+        message: (isBlocked ? "🛡️ " : isSwap ? "🔄 " : "") + r.text,
+        type: isBlocked ? "error" : isSwap ? "success" : "reasoning",
         action: r.action,
       });
     }
