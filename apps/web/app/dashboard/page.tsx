@@ -146,6 +146,15 @@ function NextActionCard({ onTriggerTick }: { onTriggerTick: () => void }) {
   const isTicking = triggerTick.isPending;
   const tickError = triggerTick.isError ? String(triggerTick.error) : null;
 
+  // Elapsed timer while tick is in flight
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!isTicking) { setElapsed(0); return; }
+    setElapsed(0);
+    const id = setInterval(() => setElapsed(s => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [isTicking]);
+
   const countdownStr = countdown !== null
     ? `0:${String(countdown).padStart(2, "0")}`
     : "—";
@@ -198,7 +207,7 @@ function NextActionCard({ onTriggerTick }: { onTriggerTick: () => void }) {
           transition: "all 0.15s",
         }}
       >
-        {isTicking ? "⏳ Asking Hermes…" : "⚡ Trigger AI Tick"}
+        {isTicking ? `⏳ Asking Hermes… ${elapsed}s` : "⚡ Trigger AI Tick"}
       </button>
       {tickError && (
         <p style={{ marginTop: "0.4rem", fontSize: "0.6rem", color: "#dc2626", fontFamily: "var(--font-mono, monospace)", wordBreak: "break-all" }}>
