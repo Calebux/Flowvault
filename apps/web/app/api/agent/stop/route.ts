@@ -4,9 +4,12 @@ import { stopScheduler } from "@/lib/agent-scheduler";
 
 export async function POST() {
   stopScheduler();
-  const raw = await redis.get("flowvault:agent_state");
-  const current = raw ? JSON.parse(raw) : {};
-  const state = { ...current, status: "stopped" };
-  await redis.set("flowvault:agent_state", JSON.stringify(state));
-  return NextResponse.json({ success: true, state });
+
+  try {
+    const raw = await redis.get("flowvault:agent_state");
+    const current = raw ? JSON.parse(raw) : {};
+    await redis.set("flowvault:agent_state", JSON.stringify({ ...current, status: "stopped" }));
+  } catch { /* ignore */ }
+
+  return NextResponse.json({ success: true, state: { status: "stopped" } });
 }

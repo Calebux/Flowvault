@@ -14,17 +14,24 @@ export function useAgentStatus() {
   const { data, isLoading } = useQuery<AgentState>({
     queryKey: ["agent-status"],
     queryFn: fetchStatus,
-    refetchInterval: 5000,
+    refetchInterval: 3000,
   });
 
   const start = useMutation({
-    mutationFn: () => fetch("/api/agent/start", { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["agent-status"] }),
+    mutationFn: async () => {
+      const res = await fetch("/api/agent/start", { method: "POST" });
+      return res.json(); // always returns {success, state}
+    },
+    // onSettled fires on both success and error — always refresh status
+    onSettled: () => qc.invalidateQueries({ queryKey: ["agent-status"] }),
   });
 
   const stop = useMutation({
-    mutationFn: () => fetch("/api/agent/stop", { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["agent-status"] }),
+    mutationFn: async () => {
+      const res = await fetch("/api/agent/stop", { method: "POST" });
+      return res.json();
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["agent-status"] }),
   });
 
   return { status: data, isLoading, start: start.mutate, stop: stop.mutate };
