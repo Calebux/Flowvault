@@ -154,16 +154,17 @@ Threshold: ${driftThreshold}%${marketContext}${yieldContext}${expenseContext}`;
       guardrailBlocked = true;
       guardrailReason  = `BLOCKED by guardrail: swap $${swapAmount.toFixed(0)} requires multi-sig approval (threshold: $${rules.requireHumanApprovalAbove}). Waiting for DAO signers.`;
     } else {
-      // Track daily volume
-      const volKey  = "flowvault:daily_volume";
-      const dailyVol = parseFloat((await redis.get(volKey)) ?? "0");
-      if (dailyVol + swapAmount > rules.maxDailyVolumeUSD) {
-        guardrailBlocked = true;
-        guardrailReason  = `BLOCKED by guardrail: daily volume cap reached ($${(dailyVol + swapAmount).toFixed(0)} would exceed $${rules.maxDailyVolumeUSD} limit).`;
-      } else {
-        // Increment daily volume counter (TTL resets at 24h)
-        await redis.set(volKey, (dailyVol + swapAmount).toFixed(2), "EX", 86400);
-      }
+      // Track daily volume (best-effort — Redis failure skips cap check)
+      try {
+        const volKey   = "flowvault:daily_volume";
+        const dailyVol = parseFloat((await redis.get(volKey)) ?? "0");
+        if (dailyVol + swapAmount > rules.maxDailyVolumeUSD) {
+          guardrailBlocked = true;
+          guardrailReason  = `BLOCKED by guardrail: daily volume cap reached ($${(dailyVol + swapAmount).toFixed(0)} would exceed $${rules.maxDailyVolumeUSD} limit).`;
+        } else {
+          await redis.set(volKey, (dailyVol + swapAmount).toFixed(2), "EX", 86400);
+        }
+      } catch { /* Redis unavailable — skip daily volume cap */ }
     }
 
     if (guardrailBlocked) {
@@ -196,32 +197,36 @@ Threshold: ${driftThreshold}%${marketContext}${yieldContext}${expenseContext}`;
   const nextDrift: Allocation = { FLOW: parseFloat((next.FLOW - targetAllocation.FLOW).toFixed(2)), USDC: parseFloat((next.USDC - targetAllocation.USDC).toFixed(2)), USDT: parseFloat((next.USDT - targetAllocation.USDT).toFixed(2)), stFLOW: parseFloat((next.stFLOW - targetAllocation.stFLOW).toFixed(2)) };
   const nextShouldRebalance = Math.max(...Object.values(nextDrift).map(Math.abs)) > driftThreshold;
 
-  // ── Persist to Redis ──────────────────────────────────────────────────────────
+  // ── Persist to Redis (all best-effort — tick always returns a result) ─────────
   const reasoningEntry = JSON.stringify({ text: reasoning, action, timestamp: Date.now(), filecoinCid });
-  await redis.lpush("flowvault:reasoning_log", reasoningEntry);
-  await redis.ltrim("flowvault:reasoning_log", 0, 49);
-  await redis.set("flowvault:last_reasoning", reasoningEntry, "EX", 3600);
+  try { await redis.lpush("flowvault:reasoning_log", reasoningEntry); } catch { /* ignore */ }
+  try { await redis.ltrim("flowvault:reasoning_log", 0, 49); } catch { /* ignore */ }
+  try { await redis.set("flowvault:last_reasoning", reasoningEntry, "EX", 3600); } catch { /* ignore */ }
 
   if (filecoinCid) {
-    await redis.lpush("flowvault:rebalance_cids", filecoinCid);
-    await redis.ltrim("flowvault:rebalance_cids", 0, 49);
+    try { await redis.lpush("flowvault:rebalance_cids", filecoinCid); } catch { /* ignore */ }
+    try { await redis.ltrim("flowvault:rebalance_cids", 0, 49); } catch { /* ignore */ }
   }
 
-  await redis.set("flowvault:last_tick", JSON.stringify({
-    rates: prices,
-    balances: [
-      { token: "FLOW",   address: "0xd3bF53DAC106A0290B0483EcBC89d40FcC961f3e", balanceUSD: (next.FLOW   / 100) * totalUSD },
-      { token: "USDC",   address: "0xF1815bd50389c46847f0Bda824eC8da914045D14", balanceUSD: (next.USDC   / 100) * totalUSD },
-      { token: "USDT",   address: "0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8", balanceUSD: (next.USDT   / 100) * totalUSD },
-      { token: "stFLOW", address: "0x53bDb5D23e5e70B1c0B739b38bCB83b8B8d71e5c", balanceUSD: (next.stFLOW / 100) * totalUSD },
-    ],
-    currentAllocation: next, drift: nextDrift, shouldRebalance: nextShouldRebalance, tickAt: Date.now(),
-  }));
-  await redis.set("flowvault:token_prices", JSON.stringify({ ...prices, updatedAt: Date.now() }));
+  try {
+    await redis.set("flowvault:last_tick", JSON.stringify({
+      rates: prices,
+      balances: [
+        { token: "FLOW",   address: "0xd3bF53DAC106A0290B0483EcBC89d40FcC961f3e", balanceUSD: (next.FLOW   / 100) * totalUSD },
+        { token: "USDC",   address: "0xF1815bd50389c46847f0Bda824eC8da914045D14", balanceUSD: (next.USDC   / 100) * totalUSD },
+        { token: "USDT",   address: "0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8", balanceUSD: (next.USDT   / 100) * totalUSD },
+        { token: "stFLOW", address: "0x53bDb5D23e5e70B1c0B739b38bCB83b8B8d71e5c", balanceUSD: (next.stFLOW / 100) * totalUSD },
+      ],
+      currentAllocation: next, drift: nextDrift, shouldRebalance: nextShouldRebalance, tickAt: Date.now(),
+    }));
+  } catch { /* ignore */ }
+  try { await redis.set("flowvault:token_prices", JSON.stringify({ ...prices, updatedAt: Date.now() })); } catch { /* ignore */ }
 
-  const stateRaw = await redis.get("flowvault:agent_state");
-  const state = stateRaw ? JSON.parse(stateRaw) : { startedAt: Date.now(), totalTrades: 0, totalFeesUSD: 0 };
-  await redis.set("flowvault:agent_state", JSON.stringify({ ...state, status: "active", lastTickAt: Date.now(), uptime: state.startedAt ? Math.floor((Date.now() - state.startedAt) / 1000) : 0 }));
+  try {
+    const stateRaw = await redis.get("flowvault:agent_state");
+    const state = stateRaw ? JSON.parse(stateRaw) : { startedAt: Date.now(), totalTrades: 0, totalFeesUSD: 0 };
+    await redis.set("flowvault:agent_state", JSON.stringify({ ...state, status: "active", lastTickAt: Date.now(), uptime: state.startedAt ? Math.floor((Date.now() - state.startedAt) / 1000) : 0 }));
+  } catch { /* ignore */ }
 
   return { action, toolArgs, reasoning, drift: nextDrift, shouldRebalance: nextShouldRebalance, filecoinCid };
 }

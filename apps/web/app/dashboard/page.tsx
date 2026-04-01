@@ -129,7 +129,12 @@ function NextActionCard({ onTriggerTick }: { onTriggerTick: () => void }) {
   }, [activityEntries]);
 
   const triggerTick = useMutation({
-    mutationFn: () => fetch("/api/agent/tick", { method: "POST" }).then(r => r.json()),
+    mutationFn: async () => {
+      const res = await fetch("/api/agent/tick", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      return data;
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["activity"] });
       qc.invalidateQueries({ queryKey: ["agent-status"] });
@@ -139,6 +144,7 @@ function NextActionCard({ onTriggerTick }: { onTriggerTick: () => void }) {
 
   const isActive = agentState?.status === "active";
   const isTicking = triggerTick.isPending;
+  const tickError = triggerTick.isError ? String(triggerTick.error) : null;
 
   const countdownStr = countdown !== null
     ? `0:${String(countdown).padStart(2, "0")}`
@@ -194,6 +200,11 @@ function NextActionCard({ onTriggerTick }: { onTriggerTick: () => void }) {
       >
         {isTicking ? "⏳ Asking Hermes…" : "⚡ Trigger AI Tick"}
       </button>
+      {tickError && (
+        <p style={{ marginTop: "0.4rem", fontSize: "0.6rem", color: "#dc2626", fontFamily: "var(--font-mono, monospace)", wordBreak: "break-all" }}>
+          Error: {tickError}
+        </p>
+      )}
     </div>
   );
 }
