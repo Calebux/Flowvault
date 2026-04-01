@@ -4,7 +4,6 @@
 
 An autonomous AI agent that manages DAO treasuries on Flow — continuously rebalancing, earning yield on idle capital, and protecting runway for upcoming expenses. Every decision is logged on-chain with plain-English reasoning.
 
-**Forked from [MentoGuard](https://github.com/Calebux/Mentoguard)** — a live autonomous FX hedging agent on Celo mainnet with 13+ confirmed transactions. FlowVault inherits the proven observe→decide→act loop and adapts it for DAO treasury management on Flow EVM.
 
 ---
 
