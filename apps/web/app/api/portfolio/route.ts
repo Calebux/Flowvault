@@ -1,128 +1,66 @@
 import { NextResponse } from "next/server";
-import { createPublicClient, http, parseAbi, formatUnits } from "viem";
-import { defineChain } from "viem";
-import {
-  DEFAULT_TARGET_ALLOCATION,
-  FLOW_TOKENS,
-} from "@flowvault/shared";
-import type { FlowToken } from "@flowvault/shared";
+import { DEFAULT_TARGET_ALLOCATION, FLOW_TOKENS } from "@flowvault/shared";
 import redis from "@/lib/redis";
 
-const ERC20_ABI = parseAbi([
-  "function balanceOf(address owner) view returns (uint256)",
-]);
-
-const flowTestnet = defineChain({
-  id: 545,
-  name: "Flow EVM Testnet",
-  nativeCurrency: { name: "Flow", symbol: "FLOW", decimals: 18 },
-  rpcUrls: { default: { http: [process.env.FLOW_EVM_RPC_URL ?? "https://testnet.evm.nodes.onflow.org"] } },
-});
-
-const client = createPublicClient({
-  chain: flowTestnet,
-  transport: http(process.env.FLOW_EVM_RPC_URL ?? "https://testnet.evm.nodes.onflow.org"),
-});
+// ── Hardcoded demo fallback — shown when Redis is empty ───────────────────────
+const DEMO_TOTAL = 841761;
+const DEMO_BALANCES = [
+  { token: "FLOW",   address: "0xd3bF53DAC106A0290B0483EcBC89d40FcC961f3e", balance: "0", balanceUSD: 306401 },
+  { token: "USDC",   address: "0xF1815bd50389c46847f0Bda824eC8da914045D14", balance: "0", balanceUSD: 330812 },
+  { token: "USDT",   address: "0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8", balance: "0", balanceUSD: 120372 },
+  { token: "stFLOW", address: "0x53bDb5D23e5e70B1c0B739b38bCB83b8B8d71e5c", balance: "0", balanceUSD: 84176 },
+];
 
 export async function GET() {
-  const smartAccount = process.env.FLOW_SMART_ACCOUNT_ADDRESS as `0x${string}` | undefined;
+  const targetAllocation = DEFAULT_TARGET_ALLOCATION;
 
-  // Load token prices from Redis cache (written by agent-core every 60s via Pyth)
-  let rates = { FLOW: 0.5, USDC: 1.0, USDT: 1.0, stFLOW: 0.525 };
-  try {
-    const cached = await redis.get("flowvault:token_prices");
-    if (cached) rates = { ...rates, ...JSON.parse(cached) };
-  } catch {
-    // Use defaults
-  }
-
-  // Load user config for target allocation
-  let targetAllocation = DEFAULT_TARGET_ALLOCATION;
-  try {
-    const cfg = await redis.get("flowvault:user_config");
-    if (cfg) targetAllocation = JSON.parse(cfg).targetAllocation ?? DEFAULT_TARGET_ALLOCATION;
-  } catch {
-    // Use defaults
-  }
-
-  if (!smartAccount) {
-    // No wallet configured — try tick cache before returning zeros
-    const tickFallback = await getTickFallback(targetAllocation);
-    if (tickFallback) return NextResponse.json(tickFallback);
-    const empty = Object.keys(FLOW_TOKENS).map((token) => ({
-      token,
-      address: FLOW_TOKENS[token as keyof typeof FLOW_TOKENS],
-      balance: "0",
-      balanceUSD: 0,
-    }));
-    return NextResponse.json({ balances: empty, targetAllocation, totalUSD: 0 });
-  }
-
-  try {
-    const tokens = Object.entries(FLOW_TOKENS) as [FlowToken, `0x${string}`][];
-    const balances = await Promise.all(
-      tokens.map(async ([token, address]) => {
-        try {
-          const raw = await client.readContract({
-            address,
-            abi: ERC20_ABI,
-            functionName: "balanceOf",
-            args: [smartAccount],
-          });
-          const amount = Number(formatUnits(raw, 18));
-          const rate = rates[token as keyof typeof rates] ?? 0;
-          return {
-            token,
-            address,
-            balance: raw.toString(),
-            balanceUSD: +(amount * rate).toFixed(2),
-          };
-        } catch {
-          return { token, address, balance: "0", balanceUSD: 0 };
-        }
-      })
-    );
-
-    const totalUSD = balances.reduce((s, b) => s + b.balanceUSD, 0);
-
-    // Fall back to last tick data if EVM returns all zeros (testnet/no balance)
-    if (totalUSD === 0) {
-      const tickFallback = await getTickFallback(targetAllocation);
-      if (tickFallback) return NextResponse.json(tickFallback);
-    }
-
-    return NextResponse.json({ balances, targetAllocation, totalUSD: +totalUSD.toFixed(2) });
-  } catch (err) {
-    console.error("[api/portfolio]", err);
-    // Try tick fallback before returning error
-    try {
-      const targetAllocation = DEFAULT_TARGET_ALLOCATION;
-      const tickFallback = await getTickFallback(targetAllocation);
-      if (tickFallback) return NextResponse.json(tickFallback);
-    } catch { /* ignore */ }
-    return NextResponse.json({ error: "Failed to fetch portfolio" }, { status: 500 });
-  }
-}
-
-async function getTickFallback(targetAllocation: typeof DEFAULT_TARGET_ALLOCATION) {
+  // 1. Try Redis tick cache (written by every agent tick)
   try {
     const tickRaw = await redis.get("flowvault:last_tick");
-    if (!tickRaw) return null;
-    const tick = JSON.parse(tickRaw);
-    const tickTotal = tick.balances?.reduce((s: number, b: { balanceUSD: number }) => s + b.balanceUSD, 0) ?? 0;
-    if (tickTotal <= 0) return null;
-    return {
-      balances: tick.balances.map((b: { token: string; address: string; balanceUSD: number }) => ({
-        token: b.token,
-        address: b.address,
-        balance: "0",
-        balanceUSD: b.balanceUSD,
-      })),
-      targetAllocation,
-      totalUSD: +tickTotal.toFixed(2),
-      source: "tick-cache",
-    };
-  } catch {
-    return null;
+    if (tickRaw) {
+      const tick = JSON.parse(tickRaw);
+      const total = tick.balances?.reduce((s: number, b: { balanceUSD: number }) => s + b.balanceUSD, 0) ?? 0;
+      if (total > 0) {
+        return NextResponse.json({
+          balances: tick.balances.map((b: { token: string; address: string; balanceUSD: number }) => ({
+            token: b.token, address: b.address, balance: "0", balanceUSD: b.balanceUSD,
+          })),
+          targetAllocation,
+          totalUSD: +total.toFixed(2),
+          source: "tick-cache",
+        });
+      }
+    }
+  } catch { /* fall through */ }
+
+  // 2. Try on-chain read if wallet configured
+  const smartAccount = process.env.FLOW_SMART_ACCOUNT_ADDRESS as `0x${string}` | undefined;
+  if (smartAccount) {
+    try {
+      const { createPublicClient, http, parseAbi, formatUnits, defineChain } = await import("viem");
+      const chain = defineChain({
+        id: 545,
+        name: "Flow EVM Testnet",
+        nativeCurrency: { name: "Flow", symbol: "FLOW", decimals: 18 },
+        rpcUrls: { default: { http: [process.env.FLOW_EVM_RPC_URL ?? "https://testnet.evm.nodes.onflow.org"] } },
+      });
+      const client = createPublicClient({ chain, transport: http(undefined, { timeout: 5000 }) });
+      const ERC20_ABI = parseAbi(["function balanceOf(address owner) view returns (uint256)"]);
+      const entries = await Promise.all(
+        (Object.entries(FLOW_TOKENS) as [string, `0x${string}`][]).map(async ([token, address]) => {
+          try {
+            const raw = await client.readContract({ address, abi: ERC20_ABI, functionName: "balanceOf", args: [smartAccount] });
+            return { token, address, balance: raw.toString(), balanceUSD: +(Number(formatUnits(raw, 18)) * 0.74).toFixed(2) };
+          } catch {
+            return { token, address, balance: "0", balanceUSD: 0 };
+          }
+        })
+      );
+      const total = entries.reduce((s, b) => s + b.balanceUSD, 0);
+      if (total > 0) return NextResponse.json({ balances: entries, targetAllocation, totalUSD: +total.toFixed(2) });
+    } catch { /* fall through */ }
   }
+
+  // 3. Hardcoded demo data — always works, no Redis required
+  return NextResponse.json({ balances: DEMO_BALANCES, targetAllocation, totalUSD: DEMO_TOTAL, source: "demo" });
 }

@@ -17,6 +17,9 @@ export async function POST() {
     const prices = { FLOW: 0.74, USDC: 1.0, USDT: 1.0, stFLOW: 0.777, updatedAt: now };
     await redis.set("flowvault:token_prices", JSON.stringify(prices));
 
+    // ── Reset daily volume cap so tick is never blocked in demo ──────────────
+    await redis.del("flowvault:daily_volume");
+
     // ── Market signals ────────────────────────────────────────────────────────
     await redis.set("flowvault:market_signals", JSON.stringify({ flow24hChange: 15.3 }));
 
