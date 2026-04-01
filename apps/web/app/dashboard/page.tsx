@@ -130,7 +130,7 @@ function NextActionCard({ onTriggerTick }: { onTriggerTick: () => void }) {
 
   const triggerTick = useMutation({
     mutationFn: () => fetch("/api/agent/tick", { method: "POST" }).then(r => r.json()),
-    onSuccess: () => {
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["activity"] });
       qc.invalidateQueries({ queryKey: ["agent-status"] });
       onTriggerTick();

@@ -105,7 +105,7 @@ Threshold: ${driftThreshold}%${marketContext}${yieldContext}${expenseContext}`;
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
         body: JSON.stringify({ model: MODEL, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: context }], tools: TOOLS, tool_choice: "auto", temperature: 0.2, max_tokens: 1024 }),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(8_000),
       });
       if (res.ok) {
         const data = await res.json() as { choices: { message: { content?: string; tool_calls?: { function: { name: string; arguments: string } }[] } }[] };

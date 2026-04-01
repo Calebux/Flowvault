@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface LogEntry { id: string; time: string; message: string; type: "info" | "success" | "warning"; }
@@ -8,19 +8,15 @@ interface LogEntry { id: string; time: string; message: string; type: "info" | "
 const COLOR = { info: "rgba(25,25,24,0.4)", success: "#16a34a", warning: "#c48c5a", reasoning: "#7c3aed", error: "#dc2626" };
 
 export function AgentActivityFeed() {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch("/api/activity");
-        if (res.ok) setLogs(await res.json());
-      } catch {}
-    };
-    load();
-    const id = setInterval(load, 5_000);
-    return () => clearInterval(id);
-  }, []);
+  const { data: logs = [] } = useQuery<LogEntry[]>({
+    queryKey: ["activity"],
+    queryFn: async () => {
+      const res = await fetch("/api/activity");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 5000,
+  });
 
   return (
     <div className="m-card">
