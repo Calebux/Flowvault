@@ -11,7 +11,6 @@ const NAV = [
   { href: "/dashboard/treasury",  label: "Treasury"  },
   { href: "/dashboard/rules",     label: "Rules"     },
   { href: "/dashboard/history",   label: "History"   },
-  { href: "/dashboard/identity",  label: "Identity"  },
 ];
 
 function DemoBanner() {

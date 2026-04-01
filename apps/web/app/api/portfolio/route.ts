@@ -46,10 +46,12 @@ export async function GET() {
   }
 
   if (!smartAccount) {
-    // Return zeroed balances if no account configured
+    // No wallet configured — try tick cache before returning zeros
+    const tickFallback = await getTickFallback(targetAllocation);
+    if (tickFallback) return NextResponse.json(tickFallback);
     const empty = Object.keys(FLOW_TOKENS).map((token) => ({
       token,
-      address: FLOW_TOKENS[token],
+      address: FLOW_TOKENS[token as keyof typeof FLOW_TOKENS],
       balance: "0",
       balanceUSD: 0,
     }));
