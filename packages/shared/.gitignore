@@ -1,0 +1,2 @@
+# Un-ignore dist for this package so Railway can use pre-built type declarations
+!dist/

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import type { FXRates } from "@flowvault/shared";
 
 import redis from "@/lib/redis";
-import redis from "@/lib/redis";
 
 const FLOW_PRICE_FALLBACK: FXRates = {
   FLOW:   0.5,

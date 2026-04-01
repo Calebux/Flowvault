@@ -2,7 +2,6 @@ import { NextResponse, NextRequest } from "next/server";
 import { randomUUID } from "crypto";
 
 import redis from "@/lib/redis";
-import redis from "@/lib/redis";
 const KEY = "flowvault:dao_expenses";
 
 interface Expense {

@@ -1,2 +1,5 @@
 [phases.install]
 cmds = ["npm i -g pnpm && pnpm install --frozen-lockfile"]
+
+[phases.build]
+cmds = ["pnpm --filter @flowvault/shared build"]
